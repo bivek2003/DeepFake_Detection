@@ -4,7 +4,7 @@ PyTorch Data Pipeline for Deepfake Detection
 Integrates video and audio processing with PyTorch datasets and dataloaders.
 Handles train/val/test splitting with proper stratification.
 
-Author: Your Name
+Author: Bivek Sharma Panthi
 """
 
 import torch

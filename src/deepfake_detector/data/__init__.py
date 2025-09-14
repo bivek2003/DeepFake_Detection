@@ -7,7 +7,7 @@ This module provides functionality for:
 - Data loading and augmentation pipelines
 - Train/validation/test splitting
 
-Author: Your Name
+Author: Bivek Sharma Panthi
 """
 
 from .dataset_manager import DatasetManager, DatasetRegistry, DatasetInfo
