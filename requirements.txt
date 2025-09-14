@@ -1,0 +1,35 @@
+# requirements.txt
+# Core ML and Computer Vision
+torch>=1.12.0
+torchvision>=0.13.0
+torchaudio>=0.12.0
+opencv-python>=4.6.0
+scikit-learn>=1.1.0
+numpy>=1.21.0
+pandas>=1.4.0
+
+# Audio Processing
+librosa>=0.9.2
+soundfile>=0.10.3
+
+# Image Processing and Visualization  
+Pillow>=9.0.0
+matplotlib>=3.5.0
+seaborn>=0.11.0
+
+# Progress and Utilities
+tqdm>=4.64.0
+pyyaml>=6.0
+requests>=2.28.0
+
+# Development and Testing
+pytest>=7.0.0
+jupyter>=1.0.0
+black>=22.0.0
+flake8>=5.0.0
+
+# Optional: For future phases
+# fastapi>=0.85.0  # Phase 3: API
+# uvicorn>=0.18.0  # Phase 3: API server
+# streamlit>=1.12.0  # Phase 4: Frontend
+# onnx>=1.12.0  # Phase 6: Optimization
