@@ -4,7 +4,7 @@ Video Processing for Deepfake Detection
 Handles face detection, extraction, and preprocessing from video files.
 Supports multiple face detection backends and video augmentation techniques.
 
-Author: Your Name
+Author: Bivek Sharma Panthi
 """
 
 import cv2

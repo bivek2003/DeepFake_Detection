@@ -4,7 +4,7 @@ Audio Processing for Deepfake Detection
 Handles audio loading, feature extraction, and preprocessing for deepfake detection.
 Supports multiple audio formats and advanced feature extraction techniques.
 
-Author: Your Name
+Author: Bivek Sharma Panthi
 """
 
 import librosa

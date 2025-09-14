@@ -4,7 +4,7 @@ Dataset Management for Deepfake Detection
 Handles dataset information, downloads, and organization for multiple
 deepfake detection datasets including FaceForensics++, DFDC, Celeb-DF, etc.
 
-Author: Your Name
+Author: Bivek Sharma Panthi
 """
 
 import os
