@@ -1,0 +1,65 @@
+# Deepfake Detection Configuration
+# Generated on 2024-01-15
+
+version: "0.1.0"
+created_at: "2024-01-15T10:30:00"
+
+# Data processing settings
+data:
+  data_root: "./datasets"
+  processed_root: "./preprocessed"
+  
+  # Video processing
+  video_target_size: [224, 224]
+  max_frames_per_video: 30
+  frame_interval: 1
+  
+  # Audio processing  
+  audio_sample_rate: 16000
+  audio_duration: 3.0
+  n_mfcc: 13
+  n_mels: 128
+  hop_length: 512
+  
+  # Data splitting
+  test_size: 0.2
+  val_size: 0.1
+  stratify: true
+  random_state: 42
+
+# Training settings (Phase 2)
+training:
+  # Model
+  model_name: "efficientnet_b4"
+  num_classes: 2
+  pretrained: true
+  
+  # Hyperparameters
+  batch_size: 32
+  learning_rate: 0.0001
+  num_epochs: 50
+  weight_decay: 1e-05
+  
+  # Optimization
+  optimizer: "adam"
+  scheduler: "cosine"
+  warmup_epochs: 5
+  
+  # Hardware
+  device: "auto"
+  num_workers: 4
+  pin_memory: true
+  
+  # Checkpointing
+  save_every: 5
+  save_best: true
+  early_stopping_patience: 10
+
+# Logging settings
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_logging: true
+  log_dir: "./logs"
+  max_bytes: 10485760
+  backup_count: 5
