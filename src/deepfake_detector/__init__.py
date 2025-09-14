@@ -4,13 +4,13 @@ Deepfake Detection System
 A comprehensive system for detecting deepfakes in images, videos, and audio.
 Implements state-of-the-art models and techniques for robust detection.
 
-Author: Your Name
+Author: Bivek Sharma Panthi
 License: MIT
 """
 
 __version__ = "0.1.0"
-__author__ = "Your Name"
-__email__ = "your.email@example.com"
+__author__ = "Bivek Sharma Panthi"
+__email__ = "sharmabivek12@gmail.com"
 
 # Main components will be imported as they are developed
 # from .data import DatasetManager, VideoPreprocessor, AudioPreprocessor
