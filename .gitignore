@@ -100,8 +100,6 @@ dmypy.json
 .pyre/
 
 # Dataset directories
-datasets/
-data/
 *.zip
 *.tar.gz
 *.rar
