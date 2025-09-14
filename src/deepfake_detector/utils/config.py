@@ -3,7 +3,7 @@ Configuration and Utilities for Deepfake Detection
 
 Handles configuration management, logging setup, and utility functions.
 
-Author: Your Name
+Author: Bivek Sharma Panthi
 """
 
 import yaml
