@@ -13,12 +13,12 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 setup(
     name="deepfake-detector",
     version="0.1.0",
-    author="Your Name",
-    author_email="your.email@example.com",
+    author="Bivek Sharma Panthi",
+    author_email="sharmabivek12@gmail.com",
     description="A comprehensive deepfake detection system for images, videos, and audio",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/deepfake-detector",
+    url="https://github.com/bivek2003/DeepFake_Detection",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     classifiers=[
