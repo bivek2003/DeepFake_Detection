@@ -11,7 +11,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, List  # Added List import
 from dataclasses import dataclass, asdict
 import torch
 import numpy as np
