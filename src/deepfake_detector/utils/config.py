@@ -12,7 +12,7 @@ import logging
 import os
 from pathlib import Path
 from typing import Dict, Any, Optional, Union, List  # Added List import
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 import torch
 import numpy as np
 from datetime import datetime
@@ -27,7 +27,7 @@ class DataConfig:
     processed_root: str = "./preprocessed"
     
     # Video settings
-    video_target_size: List = [224, 224]  # Changed from tuple to list for YAML compatibility
+    video_target_size: list = field(default_factory=lambda: [224, 224])
     max_frames_per_video: int = 30
     frame_interval: int = 1
     
