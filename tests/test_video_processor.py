@@ -353,7 +353,11 @@ class TestVideoProcessorIntegration:
         
         # Add slight variation per frame
         noise_factor = frame_idx * 5
-        noise = np.random.randint(-noise_factor, noise_factor, (224, 224, 3), dtype=np.int16)
+        if noise_factor <= 0:
+            noise = np.zeros((224, 224, 3), dtype=np.int16)
+        else:
+            noise = np.random.randint(-noise_factor, noise_factor + 1, (224, 224, 3), dtype=np.int16)
+
         frame = np.clip(frame.astype(np.int16) + noise, 0, 255).astype(np.uint8)
         
         return frame
