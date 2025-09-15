@@ -406,8 +406,8 @@ class Phase1Tester:
                 print(f"    - Video processing limited: {e}")
         
         # Create and process synthetic audio
-        synthetic_audio = self.create_synthetic_audio(duration=1.0, sample_rate=8000)
-        features = audio_processor.extract_features(synthetic_audio, sample_rate=8000)
+        synthetic_audio = self.create_synthetic_audio(duration=1.0, sample_rate=16000)
+        features = audio_processor.extract_features(synthetic_audio, sample_rate=16000)
         print(f"    - Processed audio: MFCC shape {features.mfcc.shape}")
         
         # Test pipeline manager integration
