@@ -3,7 +3,7 @@ Configuration and Utilities for Deepfake Detection
 
 Handles configuration management, logging setup, and utility functions.
 
-Author: Bivek Sharma Panthi
+Author: Your Name
 """
 
 import yaml
@@ -27,7 +27,7 @@ class DataConfig:
     processed_root: str = "./preprocessed"
     
     # Video settings
-    video_target_size: tuple = (224, 224)
+    video_target_size: list = [224, 224]  # Changed from tuple to list for YAML compatibility
     max_frames_per_video: int = 30
     frame_interval: int = 1
     
