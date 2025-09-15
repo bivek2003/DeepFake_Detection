@@ -4,7 +4,7 @@ Audio Processing for Deepfake Detection
 Handles audio loading, feature extraction, and preprocessing for deepfake detection.
 Supports multiple audio formats and advanced feature extraction techniques.
 
-Author: Bivek Sharma Panthi
+Author: Your Name
 """
 
 import librosa
@@ -192,11 +192,16 @@ class AudioProcessor:
             y=audio, sr=sample_rate, hop_length=self.hop_length
         )
         
-        # Tonnetz (harmonic network)
-        tonnetz = librosa.feature.tonnetz(
-            y=librosa.effects.harmonic(audio), 
-            sr=sample_rate
-        )
+        # Tonnetz (harmonic network) - handle low sample rates
+        try:
+            tonnetz = librosa.feature.tonnetz(
+                y=librosa.effects.harmonic(audio), 
+                sr=sample_rate
+            )
+        except Exception:
+            # Fallback for low sample rates or other issues
+            n_frames = 1 + int((len(audio) - 1) // self.hop_length)
+            tonnetz = np.zeros((6, n_frames))
         
         # Tempo estimation
         try:
