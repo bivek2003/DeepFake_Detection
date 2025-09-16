@@ -1,0 +1,325 @@
+"""
+Deepfake Detection Models Package
+
+This package contains all model architectures for deepfake detection,
+including image, audio, and multimodal models.
+"""
+
+# Core base classes
+try:
+    from .base_model import BaseDeepfakeModel, ModelConfig
+except ImportError as e:
+    print(f"Warning: Could not import base_model: {e}")
+    BaseDeepfakeModel = None
+    ModelConfig = None
+
+# Registry system - import first to avoid circular imports
+try:
+    from .registry import (
+        ModelRegistry,
+        ModelInfo,
+        model_registry,
+        register_model,
+        get_model_info,
+        list_models,
+        create_model,
+        get_model,  # Added for backward compatibility
+        register_deepfake_model,
+        get_registry
+    )
+except ImportError as e:
+    print(f"Warning: Could not import registry: {e}")
+    model_registry = None
+    ModelRegistry = None
+    ModelInfo = None
+
+# Image models
+try:
+    from .efficientnet import EfficientNetDeepfake, create_efficientnet_model
+except ImportError as e:
+    print(f"Warning: Could not import EfficientNet models: {e}")
+    EfficientNetDeepfake = None
+    create_efficientnet_model = None
+
+try:
+    from .xception import XceptionDeepfake, create_xception_model
+except ImportError as e:
+    print(f"Warning: Could not import Xception model: {e}")
+    XceptionDeepfake = None
+    create_xception_model = None
+
+try:
+    from .vision_transformer import ViTDeepfake, create_vit_model
+except ImportError as e:
+    print(f"Warning: Could not import Vision Transformer: {e}")
+    ViTDeepfake = None
+    create_vit_model = None
+
+try:
+    from .resnet import ResNetDeepfake, create_resnet_model
+except ImportError as e:
+    print(f"Warning: Could not import ResNet models: {e}")
+    ResNetDeepfake = None
+    create_resnet_model = None
+
+# Audio models
+try:
+    from .aasist import AASISTDeepfake, create_aasist_model
+except ImportError as e:
+    print(f"Warning: Could not import AASIST model: {e}")
+    AASISTDeepfake = None
+    create_aasist_model = None
+
+try:
+    from .wav2vec import Wav2VecDeepfake, create_wav2vec_model
+except ImportError as e:
+    print(f"Warning: Could not import Wav2Vec model: {e}")
+    Wav2VecDeepfake = None
+    create_wav2vec_model = None
+
+# Multimodal models
+try:
+    from .multimodal import MultiModalDeepfake, create_multimodal_model
+except ImportError as e:
+    print(f"Warning: Could not import multimodal models: {e}")
+    MultiModalDeepfake = None
+    create_multimodal_model = None
+
+try:
+    from .ensemble import EnsembleModel, create_ensemble_model
+except ImportError as e:
+    print(f"Warning: Could not import ensemble models: {e}")
+    EnsembleModel = None
+    create_ensemble_model = None
+
+# Advanced models
+try:
+    from .multiscale import MultiScaleDeepfake, create_multiscale_model
+except ImportError as e:
+    print(f"Warning: Could not import MultiScale model: {e}")
+    MultiScaleDeepfake = None
+    create_multiscale_model = None
+
+# Auto-register all available models
+def _register_available_models():
+    """Register all available models with the registry."""
+    if model_registry is None:
+        print("Warning: Model registry not available, skipping auto-registration")
+        return
+    
+    registrations = []
+    
+    # EfficientNet models
+    if EfficientNetDeepfake is not None:
+        try:
+            register_model(
+                name="efficientnet_b4",
+                model_class=EfficientNetDeepfake,
+                description="EfficientNet-B4 for deepfake detection",
+                input_type="image",
+                input_shape=(3, 224, 224),
+                num_classes=2,
+                memory_mb=512,
+                inference_speed="fast"
+            )
+            registrations.append("efficientnet_b4")
+            
+            register_model(
+                name="efficientnet_b7",
+                model_class=EfficientNetDeepfake,
+                description="EfficientNet-B7 for deepfake detection",
+                input_type="image", 
+                input_shape=(3, 224, 224),
+                num_classes=2,
+                memory_mb=1024,
+                inference_speed="medium"
+            )
+            registrations.append("efficientnet_b7")
+        except Exception as e:
+            print(f"Warning: Could not register EfficientNet models: {e}")
+    
+    # Xception model
+    if XceptionDeepfake is not None:
+        try:
+            register_model(
+                name="xception",
+                model_class=XceptionDeepfake,
+                description="Xception model for deepfake detection",
+                input_type="image",
+                input_shape=(3, 224, 224),
+                num_classes=2,
+                memory_mb=800,
+                inference_speed="medium"
+            )
+            registrations.append("xception")
+        except Exception as e:
+            print(f"Warning: Could not register Xception model: {e}")
+    
+    # Vision Transformer
+    if ViTDeepfake is not None:
+        try:
+            register_model(
+                name="vit_base",
+                model_class=ViTDeepfake,
+                description="Vision Transformer for deepfake detection",
+                input_type="image",
+                input_shape=(3, 224, 224),
+                num_classes=2,
+                memory_mb=1200,
+                inference_speed="slow"
+            )
+            registrations.append("vit_base")
+        except Exception as e:
+            print(f"Warning: Could not register Vision Transformer: {e}")
+    
+    # ResNet models
+    if ResNetDeepfake is not None:
+        try:
+            register_model(
+                name="resnet50",
+                model_class=ResNetDeepfake,
+                description="ResNet-50 for deepfake detection",
+                input_type="image",
+                input_shape=(3, 224, 224),
+                num_classes=2,
+                memory_mb=400,
+                inference_speed="fast"
+            )
+            registrations.append("resnet50")
+        except Exception as e:
+            print(f"Warning: Could not register ResNet model: {e}")
+    
+    # AASIST audio model
+    if AASISTDeepfake is not None:
+        try:
+            register_model(
+                name="aasist",
+                model_class=AASISTDeepfake,
+                description="AASIST model for audio deepfake detection",
+                input_type="audio",
+                input_shape=(1, 64000),  # 4 seconds at 16kHz
+                num_classes=2,
+                memory_mb=600,
+                inference_speed="medium"
+            )
+            registrations.append("aasist")
+        except Exception as e:
+            print(f"Warning: Could not register AASIST model: {e}")
+    
+    # Wav2Vec model
+    if Wav2VecDeepfake is not None:
+        try:
+            register_model(
+                name="wav2vec",
+                model_class=Wav2VecDeepfake,
+                description="Wav2Vec2 model for audio deepfake detection",
+                input_type="audio",
+                input_shape=(1, 64000),
+                num_classes=2,
+                memory_mb=1500,
+                inference_speed="slow"
+            )
+            registrations.append("wav2vec")
+        except Exception as e:
+            print(f"Warning: Could not register Wav2Vec model: {e}")
+    
+    # MultiModal model
+    if MultiModalDeepfake is not None:
+        try:
+            register_model(
+                name="multimodal",
+                model_class=MultiModalDeepfake,
+                description="Multimodal deepfake detection",
+                input_type="multimodal",
+                input_shape=((3, 224, 224), (1, 64000)),
+                num_classes=2,
+                memory_mb=2000,
+                inference_speed="slow"
+            )
+            registrations.append("multimodal")
+        except Exception as e:
+            print(f"Warning: Could not register multimodal model: {e}")
+    
+    # MultiScale model
+    if MultiScaleDeepfake is not None:
+        try:
+            register_model(
+                name="multiscale",
+                model_class=MultiScaleDeepfake,
+                description="MultiScale CNN for deepfake detection",
+                input_type="image",
+                input_shape=(3, 224, 224),
+                num_classes=2,
+                memory_mb=700,
+                inference_speed="medium"
+            )
+            registrations.append("multiscale")
+        except Exception as e:
+            print(f"Warning: Could not register MultiScale model: {e}")
+    
+    if registrations:
+        print(f"✅ Auto-registered {len(registrations)} models: {', '.join(registrations)}")
+    else:
+        print("⚠️  No models were auto-registered")
+
+# Register models on import
+_register_available_models()
+
+# Convenience functions for model creation
+def get_available_models():
+    """Get list of all available models."""
+    if model_registry is None:
+        return []
+    return list_models()
+
+def get_image_models():
+    """Get list of image models."""
+    if model_registry is None:
+        return []
+    return list_models(input_type="image")
+
+def get_audio_models():
+    """Get list of audio models."""
+    if model_registry is None:
+        return []
+    return list_models(input_type="audio")
+
+def get_multimodal_models():
+    """Get list of multimodal models."""
+    if model_registry is None:
+        return []
+    return list_models(input_type="multimodal")
+
+# Define what gets exported
+__all__ = [
+    # Base classes
+    'BaseDeepfakeModel', 'ModelConfig',
+    
+    # Registry
+    'ModelRegistry', 'ModelInfo', 'model_registry',
+    'register_model', 'get_model_info', 'list_models', 'create_model', 'get_model',
+    'register_deepfake_model', 'get_registry',
+    
+    # Image models
+    'EfficientNetDeepfake', 'create_efficientnet_model',
+    'XceptionDeepfake', 'create_xception_model', 
+    'ViTDeepfake', 'create_vit_model',
+    'ResNetDeepfake', 'create_resnet_model',
+    
+    # Audio models
+    'AASISTDeepfake', 'create_aasist_model',
+    'Wav2VecDeepfake', 'create_wav2vec_model',
+    
+    # Multimodal models
+    'MultiModalDeepfake', 'create_multimodal_model',
+    'EnsembleModel', 'create_ensemble_model',
+    'MultiScaleDeepfake', 'create_multiscale_model',
+    
+    # Convenience functions
+    'get_available_models', 'get_image_models', 'get_audio_models', 'get_multimodal_models'
+]
+
+# Filter out None values from __all__
+__all__ = [item for item in __all__ if globals().get(item) is not None]
+
+print(f"🎯 Deepfake Detection Models package loaded with {len([x for x in __all__ if 'create_' in x or x.endswith('Deepfake')])} model types")

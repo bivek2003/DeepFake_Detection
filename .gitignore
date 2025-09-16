@@ -105,7 +105,6 @@ dmypy.json
 *.rar
 
 # Model files
-models/
 checkpoints/
 *.pth
 *.pt
