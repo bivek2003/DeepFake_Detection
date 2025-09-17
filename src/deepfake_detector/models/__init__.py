@@ -1,5 +1,5 @@
 """
-Model architectures for deepfake detection
+Model architectures for deepfake detection - Phase 2
 """
 
 from .efficientnet_detector import EfficientNetDeepfakeDetector
