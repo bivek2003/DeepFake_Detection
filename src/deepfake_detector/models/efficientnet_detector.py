@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
 """
-EfficientNet-based deepfake detector
+EfficientNet-based deepfake detector integrated with existing data pipeline
 """
 
 import torch
@@ -8,12 +7,11 @@ import torch.nn as nn
 from torchvision import models
 
 class EfficientNetDeepfakeDetector(nn.Module):
-    """EfficientNet-based deepfake detector"""
+    """EfficientNet-based deepfake detector optimized for face detection"""
     
     def __init__(self, model_name='efficientnet_b4', num_classes=2, pretrained=True):
         super(EfficientNetDeepfakeDetector, self).__init__()
         
-        # Load pretrained EfficientNet
         if model_name == 'efficientnet_b4':
             self.backbone = models.efficientnet_b4(pretrained=pretrained)
             num_features = self.backbone.classifier[1].in_features
@@ -21,13 +19,16 @@ class EfficientNetDeepfakeDetector(nn.Module):
             self.backbone = models.efficientnet_b0(pretrained=pretrained)
             num_features = self.backbone.classifier[1].in_features
         
-        # Replace classifier
+        # Enhanced classifier for deepfake detection
         self.backbone.classifier = nn.Sequential(
             nn.Dropout(0.3),
             nn.Linear(num_features, 512),
             nn.ReLU(),
+            nn.BatchNorm1d(512),
             nn.Dropout(0.2),
-            nn.Linear(512, num_classes)
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Linear(256, num_classes)
         )
     
     def forward(self, x):
