@@ -27,6 +27,7 @@ pytest>=7.0.0
 jupyter>=1.0.0
 black>=22.0.0
 flake8>=5.0.0
+tensorboard
 
 # Optional: For future phases
 # fastapi>=0.85.0  # Phase 3: API
