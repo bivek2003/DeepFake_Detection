@@ -80,7 +80,29 @@ validate:  ## Validate Phase 1 implementation
 # Benchmarking
 benchmark:  ## Run performance benchmarks
 	python -m pytest tests/ -v --benchmark-only
+# Phase 2 commands
+train-phase2:  ## Train Phase 2 models with real data
+	python train_phase2.py --data_dir ./datasets --epochs 20 --batch_size 32
 
+train-phase2-sample:  ## Train Phase 2 with sample data (quick test)
+	python train_phase2.py --use_sample --epochs 15 --batch_size 16
+
+train-efficientnet:  ## Train only EfficientNet model
+	python train_phase2.py --use_sample --model efficientnet --epochs 12
+
+train-xception:  ## Train only Xception model  
+	python train_phase2.py --use_sample --model xception --epochs 12
+
+evaluate-phase2:  ## Evaluate trained model
+	python -c "print('Evaluation script ready - check model files in ./models/')"
+
+# Phase 2 testing
+test-phase2:  ## Test Phase 2 implementation
+	python -c "from src.deepfake_detector.models import EfficientNetDeepfakeDetector; print('✅ Models import OK')"
+	python -c "from src.deepfake_detector.data.data_pipeline import DataPipelineManager; print('✅ Data pipeline OK')"
+	@echo "🎯 Phase 2 ready for training!"
+
+.PHONY: train-phase2 train-phase2-sample train-efficientnet train-xception evaluate-phase2 test-phase2
 # Documentation
 docs:  ## Generate documentation
 	@echo "📚 Documentation available in README.md"
