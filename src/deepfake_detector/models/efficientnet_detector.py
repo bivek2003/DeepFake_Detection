@@ -1,5 +1,5 @@
 """
-EfficientNet-based deepfake detector integrated with existing data pipeline
+EfficientNet-based deepfake detector
 """
 
 import torch
@@ -13,10 +13,10 @@ class EfficientNetDeepfakeDetector(nn.Module):
         super(EfficientNetDeepfakeDetector, self).__init__()
         
         if model_name == 'efficientnet_b4':
-            self.backbone = models.efficientnet_b4(pretrained=pretrained)
+            self.backbone = models.efficientnet_b4(weights='IMAGENET1K_V1' if pretrained else None)
             num_features = self.backbone.classifier[1].in_features
         else:
-            self.backbone = models.efficientnet_b0(pretrained=pretrained)
+            self.backbone = models.efficientnet_b0(weights='IMAGENET1K_V1' if pretrained else None)
             num_features = self.backbone.classifier[1].in_features
         
         # Enhanced classifier for deepfake detection
