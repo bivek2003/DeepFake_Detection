@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   deepfake-api:
     build: .
@@ -18,7 +16,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              count: all
               capabilities: [gpu]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -27,7 +25,6 @@ services:
       retries: 3
       start_period: 40s
 
-  # Optional: Add nginx reverse proxy
   nginx:
     image: nginx:alpine
     container_name: deepfake-nginx
