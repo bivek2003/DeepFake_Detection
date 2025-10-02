@@ -29,8 +29,8 @@ black>=22.0.0
 flake8>=5.0.0
 tensorboard
 
-# Optional: For future phases
-# fastapi>=0.85.0  # Phase 3: API
-# uvicorn>=0.18.0  # Phase 3: API server
-# streamlit>=1.12.0  # Phase 4: Frontend
-# onnx>=1.12.0  # Phase 6: Optimization
+#API Development
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+aiofiles>=23.2.1
