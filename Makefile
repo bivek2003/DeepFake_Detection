@@ -116,3 +116,27 @@ ci:  ## Simulate CI/CD pipeline
 	make test-quick
 	make test-unit
 	@echo "🎉 CI/CD simulation complete!"
+
+# Phase 3: API & Deployment
+run-api:  ## Run FastAPI server locally
+	python run_api.py
+
+test-api:  ## Test API endpoints
+	python test_api.py --video datasets/original_sequences/youtube/c23/videos/000.mp4
+
+docker-build:  ## Build Docker image
+	docker-compose build
+
+docker-up:  ## Start Docker services
+	docker-compose up -d
+
+docker-down:  ## Stop Docker services
+	docker-compose down
+
+docker-logs:  ## View Docker logs
+	docker-compose logs -f
+
+deploy:  ## Deploy to production
+	./deploy.sh
+
+.PHONY: run-api test-api docker-build docker-up docker-down docker-logs deploy
