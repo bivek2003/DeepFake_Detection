@@ -16,11 +16,11 @@ fi
 
 # Build Docker image
 echo "Building Docker image..."
-docker-compose build
+docker compose build
 
 # Start services
 echo "Starting services..."
-docker-compose up -d
+docker compose up -d
 
 # Wait for health check
 echo "Waiting for API to be healthy..."
