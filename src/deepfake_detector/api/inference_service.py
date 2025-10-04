@@ -1,6 +1,5 @@
 """
-Inference service for deepfake detection
-Handles model loading and prediction logic
+Inference service for deepfake detection - Updated for robust model
 """
 
 import torch
@@ -10,7 +9,7 @@ from PIL import Image
 import torchvision.transforms as transforms
 from pathlib import Path
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict
 import tempfile
 import os
 
@@ -19,9 +18,10 @@ logger = logging.getLogger(__name__)
 class InferenceService:
     """Service for running deepfake detection inference"""
     
-    def __init__(self, model_path: str, device: str = 'cuda'):
+    def __init__(self, model_path: str, device: str = 'cuda', confidence_threshold: float = 0.65):
         self.device = torch.device(device if torch.cuda.is_available() else 'cpu')
         self.model_path = model_path
+        self.confidence_threshold = confidence_threshold
         self.model = None
         self.face_cascade = cv2.CascadeClassifier(
             cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
@@ -48,6 +48,7 @@ class InferenceService:
         
         logger.info(f"Model loaded from {self.model_path}")
         logger.info(f"Model accuracy: {checkpoint.get('accuracy', 'N/A')}")
+        logger.info(f"Confidence threshold: {self.confidence_threshold}")
     
     def _extract_face(self, frame: np.ndarray) -> np.ndarray:
         """Extract face from frame"""
@@ -65,30 +66,40 @@ class InferenceService:
                 face = cv2.resize(face, (224, 224))
                 return cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
         
-        # Fallback: resize entire frame
         return cv2.cvtColor(cv2.resize(frame, (224, 224)), cv2.COLOR_BGR2RGB)
+    
+    def _get_prediction_label(self, fake_prob: float) -> tuple:
+        """Get prediction label with uncertainty handling"""
+        if fake_prob > self.confidence_threshold:
+            return "fake", True
+        elif fake_prob < (1 - self.confidence_threshold):
+            return "real", True
+        else:
+            # Uncertain range
+            return "fake" if fake_prob > 0.5 else "real", False
     
     def predict_image(self, image: np.ndarray) -> Dict:
         """Predict if image is real or fake"""
         try:
-            # Extract face
             face = self._extract_face(image)
             face_pil = Image.fromarray(face)
             face_tensor = self.transform(face_pil).unsqueeze(0).to(self.device)
             
-            # Predict
             with torch.no_grad():
                 output = self.model(face_tensor)
                 probabilities = torch.softmax(output, dim=1)[0]
                 fake_prob = probabilities[1].item()
-                prediction = "fake" if fake_prob > 0.5 else "real"
-                confidence = max(fake_prob, 1 - fake_prob)
+                
+            prediction, is_confident = self._get_prediction_label(fake_prob)
+            confidence = max(fake_prob, 1 - fake_prob)
             
             return {
                 "prediction": prediction,
                 "confidence": float(confidence),
                 "fake_probability": float(fake_prob),
-                "real_probability": float(1 - fake_prob)
+                "real_probability": float(1 - fake_prob),
+                "is_confident": is_confident,
+                "warning": None if is_confident else "Low confidence - manual review recommended"
             }
         
         except Exception as e:
@@ -104,7 +115,6 @@ class InferenceService:
             if total_frames == 0:
                 raise ValueError("Video has no frames")
             
-            # Sample frames
             frame_indices = np.linspace(0, total_frames - 1, min(max_frames, total_frames), dtype=int)
             
             predictions = []
@@ -121,9 +131,8 @@ class InferenceService:
             if not predictions:
                 raise ValueError("No faces detected in video")
             
-            # Aggregate results
             avg_fake_prob = np.mean(predictions)
-            prediction = "fake" if avg_fake_prob > 0.5 else "real"
+            prediction, is_confident = self._get_prediction_label(avg_fake_prob)
             confidence = max(avg_fake_prob, 1 - avg_fake_prob)
             
             return {
@@ -132,7 +141,9 @@ class InferenceService:
                 "fake_probability": float(avg_fake_prob),
                 "real_probability": float(1 - avg_fake_prob),
                 "frames_analyzed": len(predictions),
-                "total_frames": total_frames
+                "total_frames": total_frames,
+                "is_confident": is_confident,
+                "warning": None if is_confident else "Low confidence - video may be outside training distribution"
             }
         
         except Exception as e:
