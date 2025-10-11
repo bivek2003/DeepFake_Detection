@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { predictImage, predictVideo, predictAudio } from '../services/predictionService';
+import { logPrediction, logError } from '../utils/analytics';
 
 export const usePrediction = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -10,6 +11,8 @@ export const usePrediction = () => {
     setIsProcessing(true);
     setError(null);
     setResult(null);
+
+    const startTime = performance.now();
 
     try {
       let response;
@@ -28,11 +31,15 @@ export const usePrediction = () => {
           throw new Error('Invalid file type');
       }
       
+      const duration = performance.now() - startTime;
+      logPrediction(type, response, duration);
+      
       setResult(response);
       return response;
     } catch (err) {
       const errorMessage = err.response?.data?.message || err.message || 'Analysis failed';
       setError(errorMessage);
+      logError(err, { type, context: 'prediction' });
       return null;
     } finally {
       setIsProcessing(false);
