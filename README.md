@@ -1,16 +1,75 @@
-# React + Vite
+# Deepfake Detector - Frontend (Vite + React)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Modern web interface for deepfake detection system built with Vite, React, and Tailwind CSS.
 
-Currently, two official plugins are available:
+## ✨ Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 📸 **Webcam Capture**: Real-time face detection and analysis
+- 📤 **File Upload**: Support for images, videos, and audio files
+- 🎯 **Real-time Results**: Instant feedback with confidence scores
+- 🎨 **Modern UI**: Beautiful gradient design with Tailwind CSS
+- ⌨️ **Keyboard Shortcuts**: Quick navigation and controls
+- 📱 **Responsive**: Works on desktop and mobile browsers
+- 🎭 **Error Handling**: Graceful error boundaries and user feedback
 
-## React Compiler
+## 🚀 Prerequisites
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Node.js 20+ and npm
+- Backend API running (default: http://localhost:8000)
 
-## Expanding the ESLint configuration
+## 📦 Installation
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm install
+```
+
+## 🏃 Development
+
+```bash
+npm run dev
+```
+
+Open http://localhost:5173
+
+## 🏗️ Build for Production
+
+```bash
+npm run build
+npm run preview
+```
+
+## ⌨️ Keyboard Shortcuts
+
+- `U` - Switch to Upload mode
+- `W` - Switch to Webcam mode
+- `R` - Reset/Analyze another
+- `Esc` - Stop webcam (when active)
+
+## 📁 Project Structure
+
+```
+src/
+├── components/       # React components
+├── hooks/           # Custom React hooks
+├── services/        # API services
+├── utils/           # Utility functions
+├── constants/       # App constants
+├── App.jsx          # Main app
+└── main.jsx         # Entry point
+```
+
+## 🔧 Environment Variables
+
+- `VITE_API_URL` - Backend API endpoint (default: http://localhost:8000)
+
+## 🛠️ Technologies
+
+- Vite - Next generation frontend tooling
+- React 18 - UI library
+- Tailwind CSS - Utility-first CSS
+- Axios - HTTP client
+- Lucide React - Icon library
+
+## 📄 License
+
+Part of the Deepfake Detection project - Phase 4 Frontend
