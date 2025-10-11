@@ -20,7 +20,7 @@ def load_model(model_path):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = EfficientNetDeepfakeDetector('efficientnet_b0')
     
-    checkpoint = torch.load(model_path, map_location=device)
+    checkpoint = torch.load(model_path, map_location=device, weights_only=False)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.to(device)
     model.eval()
