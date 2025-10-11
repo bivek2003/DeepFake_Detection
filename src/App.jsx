@@ -9,7 +9,7 @@ import {
   ResultCard,
   Disclaimer,
 } from './components';
-import { useMode, useWebcam, usePrediction, useFileUpload } from './hooks';
+import { useMode, useWebcam, usePrediction, useFileUpload, useKeyboardShortcuts } from './hooks';
 import { MODES, MESSAGES } from './constants/ui';
 
 function App() {
@@ -45,6 +45,14 @@ function App() {
     prediction.reset();
     upload.reset();
   };
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts([
+    { key: 'u', callback: () => handleModeChange(MODES.UPLOAD) },
+    { key: 'w', callback: () => handleModeChange(MODES.WEBCAM) },
+    { key: 'r', callback: handleReset },
+    { key: 'Escape', callback: () => webcam.isStreaming && webcam.stop() },
+  ]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
