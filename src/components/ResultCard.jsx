@@ -8,6 +8,7 @@ export const ResultCard = ({ result, onReset }) => {
   if (!result) return null;
 
   const isReal = result.prediction === PREDICTION_TYPES.REAL;
+  console.log(isReal)
 
   return (
     <div className={`rounded-xl p-6 mb-8 animate-fade-in ${
