@@ -72,7 +72,7 @@ print(f"Test set: {len(test_videos)} videos ({test_labels.count(0)} real, {test_
 # Load model
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = EfficientNetDeepfakeDetector('efficientnet_b0').to(device)
-checkpoint = torch.load('models/faceforensics_improved.pth', map_location=device)
+checkpoint = torch.load('models/faceforensics_improved.pth', map_location=device, weights_only=False)
 model.load_state_dict(checkpoint['model_state_dict'])
 model.eval()
 
