@@ -5,8 +5,8 @@ export const MODES = {
 };
 
 export const PREDICTION_TYPES = {
-  REAL: 'REAL',
-  FAKE: 'FAKE',
+  REAL: 'real',
+  FAKE: 'fake',
 };
 
 export const MESSAGES = {
