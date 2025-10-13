@@ -41,7 +41,11 @@ class InferenceService:
         from deepfake_detector.models.efficientnet_detector import EfficientNetDeepfakeDetector
         
         self.model = EfficientNetDeepfakeDetector('efficientnet_b0')
+<<<<<<< HEAD
         checkpoint = torch.load(self.model_path, map_location=self.device)
+=======
+        checkpoint = torch.load(self.model_path, map_location=self.device, weights_only=False)
+>>>>>>> main
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model.to(self.device)
         self.model.eval()
