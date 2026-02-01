@@ -1,4 +1,4 @@
-# Backend Dockerfile - Python 3.11 + FastAPI with CUDA support
+# Training Dockerfile - CUDA-enabled PyTorch for GPU training
 FROM nvidia/cuda:12.1-cudnn8-runtime-ubuntu22.04
 
 # Set environment variables
@@ -21,6 +21,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxext6 \
     libxrender1 \
     libxcb1 \
+    ffmpeg \
+    git \
+    wget \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -36,19 +39,15 @@ RUN python -m pip install --upgrade pip setuptools wheel
 # Install PyTorch with CUDA support
 RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
-# Install timm for model architecture
-RUN pip install timm>=0.9.12
-
-# Copy and install other requirements
-COPY requirements-minimal.txt ./
-RUN pip install -r requirements-minimal.txt
+# Copy and install training requirements
+COPY requirements-train.txt ./
+RUN pip install -r requirements-train.txt
 
 # Copy application code
 COPY . .
 
 # Create directories
-RUN mkdir -p /app/uploads /app/assets /app/weights
+RUN mkdir -p /app/uploads /app/assets /app/weights /app/checkpoints /app/logs /app/datasets
 
-EXPOSE 8000
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Default command for training
+CMD ["python", "-m", "scripts.train"]

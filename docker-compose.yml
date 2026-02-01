@@ -19,7 +19,7 @@ services:
     restart: unless-stopped
 
   # ==========================================================================
-  # Backend - FastAPI
+  # Backend - FastAPI with CUDA
   # ==========================================================================
   backend:
     build:
@@ -33,6 +33,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CUDA_VISIBLE_DEVICES=0
     volumes:
       - ./backend/app:/app/app:ro
       - uploads:/app/uploads
@@ -47,16 +48,23 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
     restart: unless-stopped
 
   # ==========================================================================
-  # Celery Worker - Async Video Processing
+  # Celery Worker - Async Video Processing with CUDA
   # ==========================================================================
   celery-worker:
     build:
@@ -71,6 +79,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CUDA_VISIBLE_DEVICES=0
     volumes:
       - ./backend/app:/app/app:ro
       - uploads:/app/uploads
@@ -81,6 +90,13 @@ services:
     depends_on:
       - backend
       - redis
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     restart: unless-stopped
 
   # ==========================================================================

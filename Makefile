@@ -1,4 +1,4 @@
-.PHONY: help up down build logs test lint format migrate clean shell backend-shell frontend-shell db-shell redis-cli
+.PHONY: help up down build logs test lint format migrate clean shell backend-shell frontend-shell db-shell redis-cli train train-shell download-data extract-faces tensorboard
 
 # Default target
 help:
@@ -10,6 +10,15 @@ help:
 	@echo "  make build       - Build Docker images"
 	@echo "  make logs        - View all service logs"
 	@echo "  make logs-f      - Follow all service logs"
+	@echo ""
+	@echo "Training (GPU):"
+	@echo "  make train-build   - Build training Docker image"
+	@echo "  make train-shell   - Start training container with GPU"
+	@echo "  make train         - Run full training pipeline"
+	@echo "  make download-data - Download datasets"
+	@echo "  make extract-faces - Extract faces from videos"
+	@echo "  make tensorboard   - Start TensorBoard monitoring"
+	@echo "  make evaluate      - Evaluate trained model"
 	@echo ""
 	@echo "Testing:"
 	@echo "  make test        - Run all tests"
@@ -58,6 +67,46 @@ logs-f:
 	docker compose logs -f
 
 # =============================================================================
+# Training Commands (GPU)
+# =============================================================================
+
+train-build:
+	@echo "Building training Docker image with CUDA..."
+	docker compose -f docker-compose.train.yml build trainer
+
+train-shell:
+	@echo "Starting training container with GPU access..."
+	@mkdir -p datasets checkpoints logs
+	docker compose -f docker-compose.train.yml run --rm trainer bash
+
+train:
+	@echo "Starting full training pipeline..."
+	@mkdir -p datasets checkpoints logs
+	docker compose -f docker-compose.train.yml run --rm trainer python scripts/train.py
+
+download-data:
+	@echo "Downloading datasets..."
+	@mkdir -p datasets
+	docker compose -f docker-compose.train.yml run --rm trainer python scripts/download_datasets.py
+
+extract-faces:
+	@echo "Extracting faces from videos..."
+	docker compose -f docker-compose.train.yml run --rm trainer python scripts/extract_faces.py
+
+tensorboard:
+	@echo "Starting TensorBoard..."
+	docker compose -f docker-compose.train.yml up -d tensorboard
+	@echo "TensorBoard: http://localhost:6006"
+
+evaluate:
+	@echo "Evaluating model..."
+	docker compose -f docker-compose.train.yml run --rm trainer python scripts/evaluate.py
+
+export-model:
+	@echo "Exporting model for production..."
+	docker compose -f docker-compose.train.yml run --rm trainer python scripts/export_model.py
+
+# =============================================================================
 # Testing
 # =============================================================================
 
@@ -86,7 +135,6 @@ lint: lint-backend lint-frontend
 lint-backend:
 	@echo "Linting backend..."
 	docker compose exec -T backend ruff check app tests
-	docker compose exec -T backend black --check app tests
 
 lint-frontend:
 	@echo "Linting frontend..."
@@ -97,7 +145,6 @@ format: format-backend format-frontend
 
 format-backend:
 	@echo "Formatting backend..."
-	docker compose exec -T backend black app tests
 	docker compose exec -T backend ruff check --fix app tests
 
 format-frontend:
@@ -156,12 +203,21 @@ dev-worker:
 	cd backend && celery -A app.workers.celery_app worker --loglevel=info
 
 # =============================================================================
+# GPU Utilities
+# =============================================================================
+
+gpu-check:
+	@echo "Checking GPU availability..."
+	docker compose -f docker-compose.train.yml run --rm trainer python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}'); print(f'GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"None\"}')"
+
+# =============================================================================
 # Cleanup
 # =============================================================================
 
 clean:
 	@echo "Cleaning up..."
 	docker compose down -v --remove-orphans
+	docker compose -f docker-compose.train.yml down -v --remove-orphans 2>/dev/null || true
 	docker system prune -f
 	rm -rf backend/.pytest_cache
 	rm -rf backend/.mypy_cache
@@ -175,15 +231,21 @@ clean-uploads:
 	rm -rf assets/*
 	@echo "Upload directories cleaned!"
 
+clean-training:
+	@echo "Cleaning training artifacts..."
+	rm -rf checkpoints/*
+	rm -rf logs/*
+	@echo "Training artifacts cleaned!"
+
 # =============================================================================
 # Production
 # =============================================================================
 
 prod-build:
-	docker compose -f docker compose.yml -f docker compose.prod.yml build
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml build
 
 prod-up:
-	docker compose -f docker compose.yml -f docker compose.prod.yml up -d
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 # =============================================================================
 # Health Checks

@@ -1,0 +1,48 @@
+# Training Configuration for Deepfake Detection
+# =============================================
+# Adjust these parameters based on your GPU and dataset
+
+model:
+  backbone: "efficientnet_b4"  # Options: efficientnet_b3, efficientnet_b4, efficientnet_b5, resnet50
+  pretrained: true              # Use ImageNet pretrained weights
+  dropout: 0.5                  # Dropout rate in classification head
+  hidden_size: 512              # Hidden layer size
+
+training:
+  epochs: 30                    # Maximum training epochs
+  batch_size: 32                # Batch size (reduce if OOM)
+  learning_rate: 0.0001         # Initial learning rate
+  weight_decay: 0.00001         # L2 regularization
+  warmup_epochs: 2              # Learning rate warmup epochs
+  grad_accumulation: 2          # Gradient accumulation steps (effective batch = batch_size * grad_accumulation)
+  mixed_precision: true         # FP16 training for memory efficiency
+  early_stop_patience: 5        # Stop if no improvement for N epochs
+  min_delta: 0.001              # Minimum improvement to reset patience
+
+data:
+  datasets_dir: "/app/datasets"   # Directory containing datasets
+  image_size: 380                 # Input image size (380 for EfficientNet-B4)
+  num_workers: 4                  # Data loading workers
+  balance_classes: true           # Balance real/fake samples during training
+
+loss:
+  type: "combined"              # Options: bce, focal, combined
+  bce_weight: 0.5               # Weight for BCE loss
+  focal_weight: 0.5             # Weight for Focal loss
+  focal_alpha: 0.25             # Focal loss alpha (class balance)
+  focal_gamma: 2.0              # Focal loss gamma (focusing parameter)
+
+checkpoints:
+  save_dir: "/app/checkpoints"  # Directory to save checkpoints
+  save_every: 1                 # Save every N epochs
+  keep_best: 3                  # Keep only N best checkpoints
+
+logging:
+  log_dir: "/app/logs"          # TensorBoard log directory
+  log_every: 50                 # Log every N batches
+
+# GPU-specific configurations
+# ---------------------------
+# RTX 3060/3070 (8-12GB): batch_size=24, grad_accumulation=3
+# RTX 3080/3090 (12-24GB): batch_size=32, grad_accumulation=2
+# RTX 4090 / A100 (24GB+): batch_size=48, grad_accumulation=2

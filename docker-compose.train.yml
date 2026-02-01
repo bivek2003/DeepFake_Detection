@@ -1,0 +1,58 @@
+# Docker Compose for CUDA Training
+# Usage: docker compose -f docker-compose.train.yml up trainer
+
+services:
+  # ==========================================================================
+  # GPU Training Service
+  # ==========================================================================
+  trainer:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.train
+    container_name: deepfake-trainer
+    env_file:
+      - .env
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+    volumes:
+      - ./backend:/app
+      - ./scripts:/app/scripts
+      - ./datasets:/app/datasets
+      - ./checkpoints:/app/checkpoints
+      - ./logs:/app/logs
+      - weights:/app/weights
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - deepfake-network
+    shm_size: '8gb'
+    stdin_open: true
+    tty: true
+    command: bash
+
+  # ==========================================================================
+  # TensorBoard for monitoring
+  # ==========================================================================
+  tensorboard:
+    image: tensorflow/tensorflow:latest
+    container_name: deepfake-tensorboard
+    command: tensorboard --logdir=/logs --host=0.0.0.0 --port=6006
+    volumes:
+      - ./logs:/logs:ro
+    ports:
+      - "6006:6006"
+    networks:
+      - deepfake-network
+
+networks:
+  deepfake-network:
+    driver: bridge
+
+volumes:
+  weights:
