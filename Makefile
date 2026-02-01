@@ -36,7 +36,7 @@ help:
 up:
 	@echo "Starting all services..."
 	@cp -n .env.example .env 2>/dev/null || true
-	docker-compose up -d
+	docker compose up -d
 	@echo ""
 	@echo "Services started!"
 	@echo "  Frontend: http://localhost:3000"
@@ -45,17 +45,17 @@ up:
 
 down:
 	@echo "Stopping all services..."
-	docker-compose down
+	docker compose down
 
 build:
 	@echo "Building Docker images..."
-	docker-compose build
+	docker compose build
 
 logs:
-	docker-compose logs
+	docker compose logs
 
 logs-f:
-	docker-compose logs -f
+	docker compose logs -f
 
 # =============================================================================
 # Testing
@@ -66,15 +66,15 @@ test: test-backend test-frontend
 
 test-backend:
 	@echo "Running backend tests..."
-	docker-compose exec -T backend pytest -v --tb=short
+	docker compose exec -T backend pytest -v --tb=short
 
 test-frontend:
 	@echo "Running frontend tests..."
-	docker-compose exec -T frontend npm run test
+	docker compose exec -T frontend npm run test
 
 test-e2e:
 	@echo "Running E2E tests..."
-	docker-compose exec -T frontend npm run test:e2e
+	docker compose exec -T frontend npm run test:e2e
 
 # =============================================================================
 # Code Quality
@@ -85,29 +85,29 @@ lint: lint-backend lint-frontend
 
 lint-backend:
 	@echo "Linting backend..."
-	docker-compose exec -T backend ruff check app tests
-	docker-compose exec -T backend black --check app tests
+	docker compose exec -T backend ruff check app tests
+	docker compose exec -T backend black --check app tests
 
 lint-frontend:
 	@echo "Linting frontend..."
-	docker-compose exec -T frontend npm run lint
+	docker compose exec -T frontend npm run lint
 
 format: format-backend format-frontend
 	@echo "Formatting completed!"
 
 format-backend:
 	@echo "Formatting backend..."
-	docker-compose exec -T backend black app tests
-	docker-compose exec -T backend ruff check --fix app tests
+	docker compose exec -T backend black app tests
+	docker compose exec -T backend ruff check --fix app tests
 
 format-frontend:
 	@echo "Formatting frontend..."
-	docker-compose exec -T frontend npm run format
+	docker compose exec -T frontend npm run format
 
 typecheck:
 	@echo "Running type checks..."
-	docker-compose exec -T backend mypy app
-	docker-compose exec -T frontend npm run typecheck
+	docker compose exec -T backend mypy app
+	docker compose exec -T frontend npm run typecheck
 
 # =============================================================================
 # Database
@@ -115,14 +115,14 @@ typecheck:
 
 migrate:
 	@echo "Running database migrations..."
-	docker-compose exec -T backend alembic upgrade head
+	docker compose exec -T backend alembic upgrade head
 
 migrate-new:
 	@read -p "Migration message: " msg; \
-	docker-compose exec -T backend alembic revision --autogenerate -m "$$msg"
+	docker compose exec -T backend alembic revision --autogenerate -m "$$msg"
 
 migrate-down:
-	docker-compose exec -T backend alembic downgrade -1
+	docker compose exec -T backend alembic downgrade -1
 
 # =============================================================================
 # Shell Access
@@ -131,16 +131,16 @@ migrate-down:
 shell: backend-shell
 
 backend-shell:
-	docker-compose exec backend bash
+	docker compose exec backend bash
 
 frontend-shell:
-	docker-compose exec frontend sh
+	docker compose exec frontend sh
 
 db-shell:
-	docker-compose exec postgres psql -U deepfake -d deepfake_detection
+	docker compose exec postgres psql -U deepfake -d deepfake_detection
 
 redis-cli:
-	docker-compose exec redis redis-cli
+	docker compose exec redis redis-cli
 
 # =============================================================================
 # Development Utilities
@@ -161,7 +161,7 @@ dev-worker:
 
 clean:
 	@echo "Cleaning up..."
-	docker-compose down -v --remove-orphans
+	docker compose down -v --remove-orphans
 	docker system prune -f
 	rm -rf backend/.pytest_cache
 	rm -rf backend/.mypy_cache
@@ -180,10 +180,10 @@ clean-uploads:
 # =============================================================================
 
 prod-build:
-	docker-compose -f docker-compose.yml -f docker-compose.prod.yml build
+	docker compose -f docker compose.yml -f docker compose.prod.yml build
 
 prod-up:
-	docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+	docker compose -f docker compose.yml -f docker compose.prod.yml up -d
 
 # =============================================================================
 # Health Checks
