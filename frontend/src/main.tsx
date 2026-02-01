@@ -1,0 +1,25 @@
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import './styles/index.css';
+
+import Dashboard from './pages/Dashboard';
+import UploadImage from './pages/UploadImage';
+import UploadVideo from './pages/UploadVideo';
+import ResultDetail from './pages/ResultDetail';
+import Layout from './components/Layout';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="upload/image" element={<UploadImage />} />
+          <Route path="upload/video" element={<UploadVideo />} />
+          <Route path="result/:id" element={<ResultDetail />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  </React.StrictMode>
+);
