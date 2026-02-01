@@ -1,6 +1,5 @@
-# Backend Dockerfile - Python 3.11 + FastAPI (Minimal)
-# Pre-built image with common dependencies
-FROM python:3.11-slim-bookworm AS base
+# Backend Dockerfile - Python 3.11 + FastAPI
+FROM python:3.11-slim-bookworm
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -9,11 +8,25 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
+# Install system dependencies for OpenCV
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    libxcb1 \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# Copy and install minimal requirements first
+# Install torch CPU-only first (smaller than full torch)
+RUN pip install --upgrade pip && \
+    pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Copy and install other requirements
 COPY requirements-minimal.txt ./
-RUN pip install --upgrade pip && pip install -r requirements-minimal.txt
+RUN pip install -r requirements-minimal.txt
 
 # Copy application code
 COPY . .
