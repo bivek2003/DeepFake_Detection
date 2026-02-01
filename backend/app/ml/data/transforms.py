@@ -41,11 +41,11 @@ def get_train_transforms(
         
         # Geometric transforms
         A.HorizontalFlip(p=0.5),
-        A.ShiftScaleRotate(
-            shift_limit=0.1,
-            scale_limit=0.15,
-            rotate_limit=15,
-            border_mode=cv2.BORDER_CONSTANT,
+        A.Affine(
+            scale=(0.85, 1.15),
+            translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)},
+            rotate=(-15, 15),
+            mode=cv2.BORDER_CONSTANT,
             p=0.5
         ),
     ]
@@ -71,27 +71,25 @@ def get_train_transforms(
             # Quality degradation (critical for deepfake detection)
             A.OneOf([
                 # JPEG compression artifacts
-                A.ImageCompression(quality_lower=30, quality_upper=100, p=1.0),
+                A.ImageCompression(quality_range=(30, 100), p=1.0),
                 # Gaussian blur
                 A.GaussianBlur(blur_limit=(3, 7), p=1.0),
                 # Downscale then upscale (simulates low quality)
-                A.Downscale(scale_min=0.5, scale_max=0.9, p=1.0),
+                A.Downscale(scale_range=(0.5, 0.9), p=1.0),
             ], p=0.5),
             
             # Noise
             A.OneOf([
-                A.GaussNoise(var_limit=(10.0, 50.0), p=1.0),
+                A.GaussNoise(std_range=(0.02, 0.1), p=1.0),
                 A.ISONoise(color_shift=(0.01, 0.05), intensity=(0.1, 0.5), p=1.0),
             ], p=0.3),
             
             # Cutout / Random erasing
             A.CoarseDropout(
-                max_holes=4,
-                max_height=image_size // 8,
-                max_width=image_size // 8,
-                min_holes=1,
-                min_height=image_size // 16,
-                min_width=image_size // 16,
+                num_holes_range=(1, 4),
+                hole_height_range=(image_size // 16, image_size // 8),
+                hole_width_range=(image_size // 16, image_size // 8),
+                fill="constant",
                 fill_value=0,
                 p=0.3
             ),

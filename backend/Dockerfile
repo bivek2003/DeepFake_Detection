@@ -1,20 +1,16 @@
-# Backend Dockerfile - Python 3.11 + FastAPI with CUDA support
-FROM nvidia/cuda:12.1-cudnn8-runtime-ubuntu22.04
+# Backend Dockerfile - Python 3.11 + FastAPI
+# For GPU inference, use Dockerfile.gpu or install NVIDIA Container Toolkit
+FROM python:3.11-slim-bookworm
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    DEBIAN_FRONTEND=noninteractive
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Install Python 3.11 and system dependencies
+# Install system dependencies for OpenCV
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.11 \
-    python3.11-dev \
-    python3.11-venv \
-    python3-pip \
     libgl1 \
     libglib2.0-0 \
     libsm6 \
@@ -24,17 +20,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Set Python 3.11 as default
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
-
 WORKDIR /app
 
 # Upgrade pip
-RUN python -m pip install --upgrade pip setuptools wheel
+RUN pip install --upgrade pip setuptools wheel
 
-# Install PyTorch with CUDA support
-RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+# Install PyTorch (CPU version for inference, GPU training uses Dockerfile.train)
+RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 # Install timm for model architecture
 RUN pip install timm>=0.9.12
