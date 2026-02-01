@@ -63,8 +63,10 @@ class FaceExtractor:
         self.device = device
         self.batch_size = batch_size
         
-        # Initialize MTCNN
+        # Initialize MTCNN - force CPU due to sm_120 compatibility
         if MTCNN_AVAILABLE:
+            # Force CPU mode for MTCNN - CUDA kernels not available for RTX 50 series
+            mtcnn_device = "cpu"
             self.detector = MTCNN(
                 image_size=output_size,
                 margin=int(output_size * margin),
@@ -72,10 +74,10 @@ class FaceExtractor:
                 thresholds=[0.6, 0.7, 0.7],
                 factor=0.709,
                 post_process=False,
-                device=device,
+                device=mtcnn_device,
                 keep_all=False,  # Only keep largest face
             )
-            print(f"Using MTCNN face detector on {device}")
+            print(f"Using MTCNN face detector on {mtcnn_device} (forced for RTX 50 series compatibility)")
         else:
             # Fallback to OpenCV Haar Cascade
             cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
