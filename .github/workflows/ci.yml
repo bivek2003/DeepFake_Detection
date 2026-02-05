@@ -17,6 +17,7 @@ jobs:
   backend-lint:
     name: Backend Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -36,6 +37,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           pip install -e ".[dev]"
 
       - name: Run ruff
@@ -56,6 +58,7 @@ jobs:
   backend-test:
     name: Backend Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs: backend-lint
     services:
       postgres:
@@ -99,6 +102,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           pip install -e ".[dev]"
 
       - name: Run tests
@@ -112,6 +116,7 @@ jobs:
 
       - name: Upload coverage
         uses: codecov/codecov-action@v3
+        continue-on-error: true
         with:
           files: backend/coverage.xml
           flags: backend
@@ -135,7 +140,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd frontend
-          npm ci
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
       - name: Run ESLint
         run: |
@@ -164,7 +169,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd frontend
-          npm ci
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
       - name: Build
         run: |
@@ -194,7 +199,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd frontend
-          npm ci
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
       - name: Run tests
         run: |
@@ -244,32 +249,42 @@ jobs:
 
       - name: Set up Docker Compose
         run: |
-          docker-compose version
+          docker compose version
 
       - name: Start services
         run: |
           cp .env.example .env
-          docker-compose up -d --build
-          sleep 30
+          docker compose up -d --build
 
-      - name: Check services health
+      - name: Wait for backend health
         run: |
-          curl -f http://localhost:8000/api/v1/healthz || exit 1
+          echo "Waiting for backend to be ready..."
+          for i in $(seq 1 24); do
+            if curl -sf http://localhost:8000/api/v1/healthz > /dev/null; then
+              echo "Backend is ready"
+              break
+            fi
+            if [ "$i" -eq 24 ]; then
+              echo "Backend did not become ready in time"
+              docker compose logs backend
+              exit 1
+            fi
+            sleep 5
+          done
 
       - name: Run basic API test
         run: |
           # Test health endpoint
           curl -s http://localhost:8000/api/v1/healthz | jq .
-          
           # Test model info
           curl -s http://localhost:8000/api/v1/model/info | jq .
 
       - name: Collect logs on failure
         if: failure()
         run: |
-          docker-compose logs
+          docker compose logs
 
       - name: Stop services
         if: always()
         run: |
-          docker-compose down -v
+          docker compose down -v
