@@ -2,7 +2,7 @@
 
 A production-ready defensive media forensics platform for detecting manipulated images and videos. **No deepfake generation capabilities** - this is a detection-only system.
 
-[![CI](https://github.com/bivek2003/DeepFake_Detection/actions/workflows/ci.yml/badge.svg)](https://github.com/bivek2003/DeepFake_Detection/actions)
+[![CI](https://github.com/bivek2003/DeepFake_Detection/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bivek2003/DeepFake_Detection/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ## Features
