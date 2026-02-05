@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, ArrowLeft, RefreshCw } from 'lucide-react';
 import UploadDropzone from '../components/UploadDropzone';

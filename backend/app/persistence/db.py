@@ -24,28 +24,32 @@ _engine: AsyncEngine | None = None
 def create_engine() -> AsyncEngine:
     """Create a new async database engine."""
     settings = get_settings()
-    
+
     # Convert postgresql:// to postgresql+asyncpg://
     database_url = settings.database_url
     if database_url.startswith("postgresql://"):
         database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    
-    return create_async_engine(
-        database_url,
-        echo=settings.debug,
-        pool_pre_ping=True,
-        pool_size=5,
-        max_overflow=10,
-    )
+
+    kwargs: dict = {
+        "echo": settings.debug,
+    }
+    if "sqlite" in database_url:
+        kwargs["connect_args"] = {"check_same_thread": False}
+    else:
+        kwargs["pool_pre_ping"] = True
+        kwargs["pool_size"] = 5
+        kwargs["max_overflow"] = 10
+
+    return create_async_engine(database_url, **kwargs)
 
 
 def get_async_engine() -> AsyncEngine:
     """Get or create async database engine (cached)."""
     global _engine
-    
+
     if _engine is None:
         _engine = create_engine()
-    
+
     return _engine
 
 
@@ -74,6 +78,6 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 async def create_tables(engine: AsyncEngine) -> None:
     """Create all database tables."""
     from app.persistence.models import Analysis, Asset, Frame  # noqa: F401
-    
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

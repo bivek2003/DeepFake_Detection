@@ -18,7 +18,7 @@ _redis_client: redis.Redis | None = None
 async def redis_client() -> redis.Redis | None:
     """Get or create Redis client."""
     global _redis_client
-    
+
     if _redis_client is None:
         settings = get_settings()
         try:
@@ -32,7 +32,7 @@ async def redis_client() -> redis.Redis | None:
         except Exception as e:
             logger.warning(f"Redis connection failed: {e}")
             _redis_client = None
-    
+
     return _redis_client
 
 
@@ -41,7 +41,7 @@ async def cache_get(key: str) -> Any | None:
     client = await redis_client()
     if client is None:
         return None
-    
+
     try:
         value = await client.get(key)
         if value:
@@ -61,7 +61,7 @@ async def cache_set(
     client = await redis_client()
     if client is None:
         return False
-    
+
     try:
         await client.setex(key, expire_seconds, json.dumps(value))
         return True
@@ -75,7 +75,7 @@ async def cache_delete(key: str) -> bool:
     client = await redis_client()
     if client is None:
         return False
-    
+
     try:
         await client.delete(key)
         return True

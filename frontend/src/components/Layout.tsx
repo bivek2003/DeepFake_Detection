@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Shield, Upload, Video, Home, Info } from 'lucide-react';
 import DemoBanner from './DemoBanner';

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Upload, Video, Clock, CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { checkHealth, getRecentAnalyses, HealthCheck, AnalysisListItem, getModels, switchModel, ModelItem } from '../api';
@@ -232,7 +232,7 @@ export default function Dashboard() {
                         {analysis.type}
                       </span>
                     </td>
-                    <td className="py-4">{getVerdictBadge(analysis.verdict)}</td>
+                    <td className="py-4">{getVerdictBadge(analysis.verdict ?? undefined)}</td>
                     <td className="py-4 text-gray-700 font-medium">
                       {analysis.confidence
                         ? `${(analysis.confidence * 100).toFixed(1)}%`

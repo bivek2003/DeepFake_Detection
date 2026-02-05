@@ -17,6 +17,7 @@ security = HTTPBearer(auto_error=False)
 
 class TokenData(BaseModel):
     """Token data payload."""
+
     sub: str
     exp: datetime
 

@@ -2,9 +2,8 @@
 Model information endpoints.
 """
 
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List
 
 from app.api.deps import AppSettings, Registry
 from app.api.schemas import ModelInfo
@@ -54,35 +53,35 @@ async def get_model_info(
 
 @router.get(
     "/model/list",
-    response_model=List[ModelItem],
+    response_model=list[ModelItem],
     summary="List available models",
     description="List all model checkpoints available for loading.",
 )
 async def list_models(
     registry: Registry,
     settings: AppSettings,
-) -> List[ModelItem]:
+) -> list[ModelItem]:
     """List available models."""
     models = registry.list_models()
-    
+
     # Mark active model
     # We infer active status by checking if metrics match
     # This is a heuristic until we store active filename explicitly
     current_metrics = registry.metrics or {}
     accuracy = current_metrics.get("accuracy", 0)
-    
+
     for model in models:
         # Check active model
         if hasattr(registry, "active_model_filename") and registry.active_model_filename:
-             if model["id"] == registry.active_model_filename:
-                 model["active"] = True
+            if model["id"] == registry.active_model_filename:
+                model["active"] = True
         # Fallback to heuristics if active_model_filename not set (e.g. initial load)
         elif not settings.demo_mode:
             if model["id"] == "model_m12_high_end.pt" and accuracy > 0.99:
                 model["active"] = True
             elif model["id"] == "model_m8_standard.pt" and accuracy < 0.99 and accuracy > 0.90:
                 model["active"] = True
-                
+
     return models
 
 
@@ -100,7 +99,7 @@ async def switch_model(
         await registry.switch_model(request.filename)
         return {"status": "success", "message": f"Switched to {request.filename}"}
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Model file not found")
+        raise HTTPException(status_code=404, detail="Model file not found") from None
     except Exception as e:
         logger.error(f"Failed to switch model: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

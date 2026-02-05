@@ -1,4 +1,3 @@
-import React from 'react';
 import { X, Server, Shield, Cpu } from 'lucide-react';
 
 interface MethodologyModalProps {

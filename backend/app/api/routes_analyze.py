@@ -5,7 +5,7 @@ Analysis endpoints for image and video deepfake detection.
 import hashlib
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
@@ -48,7 +48,7 @@ async def analyze_image_endpoint(
 ) -> ImageAnalysisResponse:
     """
     Analyze a single image for deepfake manipulation.
-    
+
     Returns verdict, confidence score, and optional heatmap overlay.
     """
     # Validate content type
@@ -57,25 +57,25 @@ async def analyze_image_endpoint(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid file type: {file.content_type}. Allowed: {settings.allowed_image_types_list}",
         )
-    
+
     # Read file content
     content = await file.read()
-    
+
     # Validate file size
     if len(content) > settings.max_file_size_bytes:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=f"File too large. Maximum size: {settings.max_file_size_mb}MB",
         )
-    
+
     # Compute hash
     file_hash = compute_sha256(content)
-    
+
     # Generate analysis ID
     analysis_id = str(uuid.uuid4())
-    
+
     start_time = time.time()
-    
+
     try:
         # Save uploaded file
         upload_path = await storage.save_upload(
@@ -83,16 +83,16 @@ async def analyze_image_endpoint(
             filename=f"{analysis_id}_{file.filename}",
             subfolder="images",
         )
-        
+
         # Run analysis
         result = await analyze_image(
             content=content,
             registry=registry,
             settings=settings,
         )
-        
+
         runtime_ms = int((time.time() - start_time) * 1000)
-        
+
         # Save heatmap if generated and link as asset for job result
         heatmap_url = None
         heatmap_path = None
@@ -103,7 +103,7 @@ async def analyze_image_endpoint(
                 subfolder="heatmaps",
             )
             heatmap_url = f"/api/v1/assets/{heatmap_path}"
-        
+
         # Create database record FIRST (before creating assets that reference it)
         analysis = Analysis(
             id=analysis_id,
@@ -117,19 +117,19 @@ async def analyze_image_endpoint(
             device=registry.device,
             upload_path=upload_path,
         )
-        
+
         db.add(analysis)
         await db.commit()
-        
+
         # Now create asset record (after analysis exists in DB)
         if heatmap_path is not None:
             await crud.create_asset(db, analysis_id, "heatmap", heatmap_path)
             await db.commit()
-        
+
         # Record metrics
         ANALYSES_TOTAL.labels(type="image", verdict=result.verdict.value).inc()
         ANALYSIS_DURATION.labels(type="image").observe(runtime_ms / 1000)
-        
+
         logger.info(
             "Image analysis completed",
             extra={
@@ -139,7 +139,7 @@ async def analyze_image_endpoint(
                 "runtime_ms": runtime_ms,
             },
         )
-        
+
         return ImageAnalysisResponse(
             id=analysis_id,
             verdict=result.verdict,
@@ -149,12 +149,12 @@ async def analyze_image_endpoint(
             model_version=registry.model_version,
             runtime_ms=runtime_ms,
             device=registry.device,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
-        
+
     except Exception as e:
         logger.error(f"Image analysis failed: {e}", exc_info=True)
-        
+
         # Save failed analysis record
         analysis = Analysis(
             id=analysis_id,
@@ -167,11 +167,11 @@ async def analyze_image_endpoint(
         )
         db.add(analysis)
         await db.commit()
-        
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Analysis failed: {str(e)}",
-        )
+        ) from e
 
 
 @router.post(
@@ -190,7 +190,7 @@ async def analyze_video_endpoint(
 ) -> VideoAnalysisResponse:
     """
     Submit a video for asynchronous deepfake analysis.
-    
+
     Returns a job ID that can be used to poll for status and results.
     """
     # Validate content type
@@ -199,23 +199,23 @@ async def analyze_video_endpoint(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid file type: {file.content_type}. Allowed: {settings.allowed_video_types_list}",
         )
-    
+
     # Read file content
     content = await file.read()
-    
+
     # Validate file size
     if len(content) > settings.max_file_size_bytes:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=f"File too large. Maximum size: {settings.max_file_size_mb}MB",
         )
-    
+
     # Compute hash
     file_hash = compute_sha256(content)
-    
+
     # Generate job ID
     job_id = str(uuid.uuid4())
-    
+
     try:
         # Save uploaded file
         upload_path = await storage.save_upload(
@@ -223,7 +223,7 @@ async def analyze_video_endpoint(
             filename=f"{job_id}_{file.filename}",
             subfolder="videos",
         )
-        
+
         # Create pending analysis record
         analysis = Analysis(
             id=job_id,
@@ -234,12 +234,14 @@ async def analyze_video_endpoint(
             device=registry.device,
             upload_path=upload_path,
         )
-        
+
         db.add(analysis)
         await db.commit()
-        
+
         # Get active model filename for worker consistency
-        model_filename = registry.active_model_filename if hasattr(registry, "active_model_filename") else None
+        model_filename = (
+            registry.active_model_filename if hasattr(registry, "active_model_filename") else None
+        )
 
         # Submit Celery task
         process_video_task.delay(
@@ -248,7 +250,7 @@ async def analyze_video_endpoint(
             file_hash=file_hash,
             model_filename=model_filename,
         )
-        
+
         logger.info(
             "Video analysis job submitted",
             extra={
@@ -256,16 +258,16 @@ async def analyze_video_endpoint(
                 "file_size": len(content),
             },
         )
-        
+
         return VideoAnalysisResponse(
             job_id=job_id,
             status=AnalysisStatus.PENDING,
             message="Video submitted for processing. Use job ID to check status.",
         )
-        
+
     except Exception as e:
         logger.error(f"Video submission failed: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to submit video: {str(e)}",
-        )
+        ) from e

@@ -33,43 +33,43 @@ async def download_report(
 ):
     """
     Download the PDF forensic report for a video analysis.
-    
+
     Only available after job is completed.
     """
     analysis = await crud.get_analysis(db, job_id)
-    
+
     if not analysis:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Job not found: {job_id}",
         )
-    
+
     if analysis.status != AnalysisStatus.COMPLETED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Report not available. Job status: {analysis.status.value}",
         )
-    
+
     # Get report asset
     assets = await crud.get_assets_for_analysis(db, job_id)
     report_asset = next((a for a in assets if a.kind == "report"), None)
-    
+
     if not report_asset:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Report not found for this job",
         )
-    
+
     # Get file path
     file_path = storage.get_asset_path(report_asset.path)
-    
+
     if not file_path.exists():
         logger.error(f"Report file not found: {file_path}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Report file not found",
         )
-    
+
     return FileResponse(
         path=str(file_path),
         media_type="application/pdf",
@@ -91,17 +91,17 @@ async def get_asset(
 ):
     """
     Retrieve a generated asset file.
-    
+
     Assets include heatmap overlays, timeline charts, and frame images.
     """
     file_path = storage.get_asset_path(path)
-    
+
     if not file_path.exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Asset not found: {path}",
         )
-    
+
     # Determine content type
     suffix = file_path.suffix.lower()
     content_types = {
@@ -111,7 +111,7 @@ async def get_asset(
         ".pdf": "application/pdf",
     }
     content_type = content_types.get(suffix, "application/octet-stream")
-    
+
     return FileResponse(
         path=str(file_path),
         media_type=content_type,

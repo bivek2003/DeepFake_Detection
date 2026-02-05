@@ -4,7 +4,8 @@ Pytest configuration and fixtures.
 
 import asyncio
 import os
-from typing import AsyncGenerator, Generator
+import tempfile
+from collections.abc import AsyncGenerator, Generator
 
 import pytest
 import pytest_asyncio
@@ -13,16 +14,18 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-# Set test environment
+# Set test environment before importing app
 os.environ["DEMO_MODE"] = "true"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["REDIS_URL"] = ""
 os.environ["CELERY_BROKER_URL"] = "memory://"
 os.environ["CELERY_RESULT_BACKEND"] = "cache+memory://"
+_test_tmp = tempfile.mkdtemp(prefix="deepfake_test_")
+os.environ["UPLOAD_DIR"] = os.path.join(_test_tmp, "uploads")
+os.environ["ASSETS_DIR"] = os.path.join(_test_tmp, "assets")
 
-from app.main import app
-from app.persistence.db import Base, get_async_session
-
+from app.main import app  # noqa: E402
+from app.persistence.db import Base  # noqa: E402
 
 # Create test database engine
 test_engine = create_async_engine(
@@ -50,10 +53,10 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """Create test database session."""
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     async with TestSessionLocal() as session:
         yield session
-    
+
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
@@ -76,8 +79,9 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
 def sample_image_bytes() -> bytes:
     """Create sample image bytes for testing."""
     import io
+
     from PIL import Image
-    
+
     # Create a simple test image
     img = Image.new("RGB", (224, 224), color="red")
     buf = io.BytesIO()
@@ -90,17 +94,17 @@ def sample_video_path(tmp_path) -> str:
     """Create sample video file for testing."""
     import cv2
     import numpy as np
-    
+
     video_path = tmp_path / "test_video.mp4"
-    
+
     # Create a simple test video
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     out = cv2.VideoWriter(str(video_path), fourcc, 30, (224, 224))
-    
+
     for _ in range(30):  # 1 second of video
         frame = np.random.randint(0, 255, (224, 224, 3), dtype=np.uint8)
         out.write(frame)
-    
+
     out.release()
-    
+
     return str(video_path)

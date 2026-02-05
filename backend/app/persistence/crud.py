@@ -11,9 +11,7 @@ from app.persistence.models import Analysis, Asset, Frame
 
 async def get_analysis(db: AsyncSession, analysis_id: str) -> Analysis | None:
     """Get analysis by ID."""
-    result = await db.execute(
-        select(Analysis).where(Analysis.id == analysis_id)
-    )
+    result = await db.execute(select(Analysis).where(Analysis.id == analysis_id))
     return result.scalar_one_or_none()
 
 
@@ -96,9 +94,7 @@ async def get_frames_for_analysis(
 ) -> list[Frame]:
     """Get all frames for an analysis."""
     result = await db.execute(
-        select(Frame)
-        .where(Frame.analysis_id == analysis_id)
-        .order_by(Frame.frame_index)
+        select(Frame).where(Frame.analysis_id == analysis_id).order_by(Frame.frame_index)
     )
     return list(result.scalars().all())
 
@@ -125,9 +121,7 @@ async def get_assets_for_analysis(
     analysis_id: str,
 ) -> list[Asset]:
     """Get all assets for an analysis."""
-    result = await db.execute(
-        select(Asset).where(Asset.analysis_id == analysis_id)
-    )
+    result = await db.execute(select(Asset).where(Asset.analysis_id == analysis_id))
     return list(result.scalars().all())
 
 
@@ -136,9 +130,5 @@ async def get_recent_analyses(
     limit: int = 20,
 ) -> list[Analysis]:
     """Get recent analyses for dashboard."""
-    result = await db.execute(
-        select(Analysis)
-        .order_by(Analysis.created_at.desc())
-        .limit(limit)
-    )
+    result = await db.execute(select(Analysis).order_by(Analysis.created_at.desc()).limit(limit))
     return list(result.scalars().all())

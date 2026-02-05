@@ -72,8 +72,10 @@ ERRORS_TOTAL = Counter(
 
 def init_metrics(version: str, commit: str) -> None:
     """Initialize application metrics."""
-    APP_INFO.info({
-        "version": version,
-        "commit": commit,
-        "service": "deepfake-detection",
-    })
+    APP_INFO.info(
+        {
+            "version": version,
+            "commit": commit,
+            "service": "deepfake-detection",
+        }
+    )

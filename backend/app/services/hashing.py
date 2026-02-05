@@ -14,11 +14,11 @@ def compute_sha256(content: bytes) -> str:
 def compute_sha256_file(file_path: str | Path) -> str:
     """Compute SHA256 hash of a file."""
     sha256_hash = hashlib.sha256()
-    
+
     with open(file_path, "rb") as f:
         for chunk in iter(lambda: f.read(8192), b""):
             sha256_hash.update(chunk)
-    
+
     return sha256_hash.hexdigest()
 
 

@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { useDropzone, Accept } from 'react-dropzone';
 import { Upload, Image, Video, X } from 'lucide-react';
 import clsx from 'clsx';

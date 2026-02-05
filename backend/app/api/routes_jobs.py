@@ -8,7 +8,6 @@ from app.api.deps import DBSession
 from app.api.schemas import (
     AnalysisListItem,
     AnalysisStatus,
-    AnalysisType,
     ChartData,
     FrameScore,
     JobResult,
@@ -59,17 +58,17 @@ async def get_job_status(
 ) -> JobStatus:
     """
     Get the current status of a video analysis job.
-    
+
     Use this endpoint to poll for job completion.
     """
     analysis = await crud.get_analysis(db, job_id)
-    
+
     if not analysis:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Job not found: {job_id}",
         )
-    
+
     # Calculate progress based on status
     progress = 0.0
     if analysis.status == AnalysisStatus.PENDING:
@@ -85,7 +84,7 @@ async def get_job_status(
         progress = 1.0
     elif analysis.status == AnalysisStatus.FAILED:
         progress = 0.0
-    
+
     return JobStatus(
         job_id=job_id,
         status=analysis.status,
@@ -109,35 +108,35 @@ async def get_job_result(
 ) -> JobResult:
     """
     Get the complete results of a video analysis job.
-    
+
     Only available after job is completed.
     """
     analysis = await crud.get_analysis(db, job_id)
-    
+
     if not analysis:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Job not found: {job_id}",
         )
-    
+
     if analysis.status == AnalysisStatus.PENDING:
         raise HTTPException(
             status_code=status.HTTP_425_TOO_EARLY,
             detail="Job is still pending. Please wait for processing to start.",
         )
-    
+
     if analysis.status == AnalysisStatus.PROCESSING:
         raise HTTPException(
             status_code=status.HTTP_425_TOO_EARLY,
             detail="Job is still processing. Please poll /jobs/{job_id} for status.",
         )
-    
+
     if analysis.status == AnalysisStatus.FAILED:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Job failed: {analysis.error or 'Unknown error'}",
         )
-    
+
     # Get frame scores
     frames = await crud.get_frames_for_analysis(db, job_id)
     frame_scores = [
@@ -149,17 +148,17 @@ async def get_job_result(
         )
         for f in frames
     ]
-    
+
     # Get suspicious frames (top 5 by score)
     suspicious_frames = sorted(frame_scores, key=lambda x: x.score, reverse=True)[:5]
-    
+
     # Get assets
     assets = await crud.get_assets_for_analysis(db, job_id)
-    
+
     heatmap_url = None
     report_url = None
     timeline_chart_url = None
-    
+
     for asset in assets:
         if asset.kind == "heatmap":
             heatmap_url = f"/api/v1/assets/{asset.path}"
@@ -167,7 +166,7 @@ async def get_job_result(
             report_url = f"/api/v1/reports/{job_id}.pdf"
         elif asset.kind == "timeline_chart":
             timeline_chart_url = f"/api/v1/assets/{asset.path}"
-    
+
     # Build chart data
     chart_data = None
     if frame_scores:
@@ -175,7 +174,7 @@ async def get_job_result(
             {"timestamp": f.timestamp, "score": f.score, "frame": f.frame_index}
             for f in frame_scores
         ]
-        
+
         # Calculate distribution buckets
         scores = [f.score for f in frame_scores]
         distribution = {
@@ -184,12 +183,12 @@ async def get_job_result(
             "max": max(scores) if scores else 0,
             "min": min(scores) if scores else 0,
         }
-        
+
         chart_data = ChartData(
             timeline=timeline_data,
             distribution=distribution,
         )
-    
+
     return JobResult(
         job_id=job_id,
         status=analysis.status,
@@ -232,11 +231,11 @@ def _calculate_distribution(scores: list[float]) -> list[dict]:
         {"range": "0.6-0.8", "min": 0.6, "max": 0.8, "count": 0},
         {"range": "0.8-1.0", "min": 0.8, "max": 1.0, "count": 0},
     ]
-    
+
     for score in scores:
         for bucket in buckets:
             if bucket["min"] <= score < bucket["max"] or (bucket["max"] == 1.0 and score == 1.0):
                 bucket["count"] += 1
                 break
-    
+
     return buckets

@@ -5,7 +5,6 @@ Tests for job management endpoints.
 import io
 import uuid
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -35,7 +34,7 @@ def test_video_analysis_submission(client: TestClient, sample_video_path: str):
     with open(sample_video_path, "rb") as f:
         files = {"file": ("test.mp4", f, "video/mp4")}
         response = client.post("/api/v1/analyze/video", files=files)
-    
+
     # Should return 202 Accepted with job_id
     if response.status_code == 202:
         data = response.json()
@@ -48,6 +47,6 @@ def test_video_analysis_invalid_type(client: TestClient):
     """Test video analysis with invalid file type."""
     files = {"file": ("test.txt", io.BytesIO(b"not a video"), "text/plain")}
     response = client.post("/api/v1/analyze/video", files=files)
-    
+
     assert response.status_code == 400
     assert "Invalid file type" in response.json()["detail"]

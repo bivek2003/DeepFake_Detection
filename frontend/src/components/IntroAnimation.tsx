@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Shield, Scan } from 'lucide-react';
 
 interface IntroAnimationProps {

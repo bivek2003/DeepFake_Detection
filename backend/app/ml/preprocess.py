@@ -22,33 +22,35 @@ IMAGENET_STD = [0.229, 0.224, 0.225]
 INFERENCE_IMAGE_SIZE = 380
 
 # Standard transforms for inference
-inference_transform = transforms.Compose([
-    transforms.Resize((INFERENCE_IMAGE_SIZE, INFERENCE_IMAGE_SIZE)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
-])
+inference_transform = transforms.Compose(
+    [
+        transforms.Resize((INFERENCE_IMAGE_SIZE, INFERENCE_IMAGE_SIZE)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+    ]
+)
 
 
 def preprocess_image_bytes(content: bytes) -> torch.Tensor:
     """
     Preprocess image from bytes for model inference.
-    
+
     Args:
         content: Image file bytes
-        
+
     Returns:
         Preprocessed tensor [1, 3, 224, 224]
     """
     # Load image
     image = Image.open(io.BytesIO(content))
-    
+
     # Convert to RGB if needed
     if image.mode != "RGB":
         image = image.convert("RGB")
-    
+
     # Apply transforms
     tensor = inference_transform(image)
-    
+
     # Add batch dimension
     return tensor.unsqueeze(0)
 
@@ -56,10 +58,10 @@ def preprocess_image_bytes(content: bytes) -> torch.Tensor:
 def preprocess_image_array(image: np.ndarray) -> torch.Tensor:
     """
     Preprocess numpy array image for model inference.
-    
+
     Args:
         image: Image as numpy array (H, W, C) in BGR or RGB format
-        
+
     Returns:
         Preprocessed tensor [1, 3, 224, 224]
     """
@@ -67,13 +69,13 @@ def preprocess_image_array(image: np.ndarray) -> torch.Tensor:
     if len(image.shape) == 3 and image.shape[2] == 3:
         # Assume BGR, convert to RGB
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    
+
     # Convert to PIL Image
     pil_image = Image.fromarray(image)
-    
+
     # Apply transforms
     tensor = inference_transform(pil_image)
-    
+
     # Add batch dimension
     return tensor.unsqueeze(0)
 
@@ -81,19 +83,19 @@ def preprocess_image_array(image: np.ndarray) -> torch.Tensor:
 def preprocess_batch(images: list[np.ndarray]) -> torch.Tensor:
     """
     Preprocess batch of images.
-    
+
     Args:
         images: List of images as numpy arrays
-        
+
     Returns:
         Batch tensor [B, 3, 224, 224]
     """
     tensors = []
-    
+
     for image in images:
         tensor = preprocess_image_array(image)
         tensors.append(tensor)
-    
+
     return torch.cat(tensors, dim=0)
 
 
@@ -112,5 +114,5 @@ def numpy_to_bytes(image: np.ndarray, format: str = "png") -> bytes:
         _, buffer = cv2.imencode(".jpg", image)
     else:
         raise ValueError(f"Unsupported format: {format}")
-    
+
     return buffer.tobytes()

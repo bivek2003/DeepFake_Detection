@@ -14,14 +14,14 @@ logger = get_logger(__name__)
 
 class JobService:
     """Service for managing analysis jobs."""
-    
+
     def __init__(self, db: AsyncSession):
         self.db = db
-    
+
     async def get_job(self, job_id: str) -> Analysis | None:
         """Get job by ID."""
         return await crud.get_analysis(self.db, job_id)
-    
+
     async def update_job_status(
         self,
         job_id: str,
@@ -31,7 +31,7 @@ class JobService:
         """Update job status."""
         await crud.update_analysis_status(self.db, job_id, status, error)
         logger.info(f"Job {job_id} status updated to {status.value}")
-    
+
     async def complete_job(
         self,
         job_id: str,
@@ -57,7 +57,7 @@ class JobService:
                 "runtime_ms": runtime_ms,
             },
         )
-    
+
     async def fail_job(self, job_id: str, error: str) -> None:
         """Mark job as failed."""
         await crud.update_analysis_status(
@@ -67,7 +67,7 @@ class JobService:
             error=error,
         )
         logger.error(f"Job {job_id} failed: {error}")
-    
+
     async def add_frame_result(
         self,
         job_id: str,
@@ -85,7 +85,7 @@ class JobService:
             score=score,
             overlay_path=overlay_path,
         )
-    
+
     async def add_asset(
         self,
         job_id: str,

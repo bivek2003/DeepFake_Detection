@@ -23,20 +23,16 @@ celery_app.conf.update(
     accept_content=["json"],
     timezone="UTC",
     enable_utc=True,
-    
     # Worker settings
     worker_prefetch_multiplier=1,
     worker_max_tasks_per_child=100,
-    
     # Task execution settings
     task_acks_late=True,
     task_reject_on_worker_lost=True,
     task_time_limit=600,  # 10 minutes
     task_soft_time_limit=540,  # 9 minutes
-    
     # Result settings
     result_expires=86400,  # 24 hours
-    
     # Beat schedule (if needed)
     beat_schedule={},
 )
