@@ -18,9 +18,12 @@ logger = get_logger(__name__)
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 
+# Match training input size (EfficientNet-B4: 380x380)
+INFERENCE_IMAGE_SIZE = 380
+
 # Standard transforms for inference
 inference_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
+    transforms.Resize((INFERENCE_IMAGE_SIZE, INFERENCE_IMAGE_SIZE)),
     transforms.ToTensor(),
     transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
 ])

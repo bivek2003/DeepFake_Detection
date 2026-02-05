@@ -148,25 +148,80 @@ class ModelRegistry:
         return device
     
     def _find_weights_file(self) -> Optional[Path]:
-        """Find model weights file."""
+        """Find best available weights file."""
         if not self._weights_path.exists():
             logger.warning(f"Weights directory does not exist: {self._weights_path}")
             return None
+            
+        # Priority list
+        priorities = ["model_m12_high_end.pt", "model_m8_standard.pt", "best_model.pt"]
         
-        for filename in self.WEIGHT_FILES:
-            weights_file = self._weights_path / filename
-            if weights_file.exists():
-                logger.info(f"Found weights file: {weights_file}")
-                return weights_file
-        
-        # Check for any .pt or .pth file
-        pt_files = list(self._weights_path.glob("*.pt")) + list(self._weights_path.glob("*.pth"))
-        if pt_files:
-            logger.info(f"Found weights file: {pt_files[0]}")
-            return pt_files[0]
-        
-        logger.warning(f"No weights file found in {self._weights_path}")
+        for name in priorities:
+            path = self._weights_path / name
+            if path.exists():
+                logger.info(f"Found priority weights file: {path}")
+                return path
+                
+        # Fallback to any .pt file
+        for file_path in self._weights_path.glob("*.pt"):
+             logger.info(f"Found fallback weights file: {file_path}")
+             return file_path
+             
         return None
+
+    def list_models(self) -> list[dict]:
+        """List available models in the weights directory."""
+        if not self._weights_path.exists():
+            return []
+            
+        models = []
+        # Standard models
+        known_models = {
+            "model_m12_high_end.pt": {
+                "name": "M12 (High-End)",
+                "description": "High accuracy, 1024 hidden units. Best for GPU.",
+                "type": "production"
+            },
+            "model_m8_standard.pt": {
+                "name": "M8 (Standard)",
+                "description": "Standard accuracy, 512 hidden units. Best for CPU/Lite.",
+                "type": "standard"
+            }
+        }
+        
+        for file_path in self._weights_path.glob("*.pt"):
+            filename = file_path.name
+            info = known_models.get(filename, {
+                "name": filename,
+                "description": "Custom model checkpoint",
+                "type": "custom"
+            })
+            
+            models.append({
+                "id": filename,
+                "name": info["name"],
+                "description": info["description"],
+                "type": info["type"],
+                "size_mb": round(file_path.stat().st_size / (1024 * 1024), 1),
+                "active": False 
+            })
+            
+        return models
+
+    async def switch_model(self, filename: str) -> bool:
+        """Switch to a specific model file."""
+        target_path = self._weights_path / filename
+        if not target_path.exists():
+            raise FileNotFoundError(f"Model file {filename} not found")
+            
+        logger.info(f"Switching to model: {filename}")
+        try:
+            await self._load_real_model(target_path)
+            self.active_model_filename = filename
+            return True
+        except Exception as e:
+            logger.error(f"Failed to switch model: {e}")
+            raise
     
     async def initialize(self) -> None:
         """Initialize model registry."""
@@ -220,7 +275,7 @@ class ModelRegistry:
             from app.ml.architecture import DeepfakeDetector
             
             logger.info(f"Loading model from {weights_path}")
-            checkpoint = torch.load(weights_path, map_location=self._device)
+            checkpoint = torch.load(weights_path, map_location=self._device, weights_only=False)
             
             # Determine backbone from checkpoint
             if isinstance(checkpoint, dict):
@@ -234,11 +289,66 @@ class ModelRegistry:
             
             logger.info(f"Creating model with backbone: {backbone}")
             
-            # Create model
-            self.model = DeepfakeDetector(
-                backbone=backbone,
-                pretrained=False,  # We're loading our own weights
-            )
+            # Determine if it's an ensemble model by checking the actual state_dict keys
+            # This is more reliable than config metadata which may be inconsistent
+            is_ensemble = False
+            state_dict = None
+            if isinstance(checkpoint, dict):
+                if "model_state_dict" in checkpoint:
+                    state_dict = checkpoint["model_state_dict"]
+                elif "state_dict" in checkpoint:
+                    state_dict = checkpoint["state_dict"]
+                else:
+                    state_dict = checkpoint
+            
+            if state_dict:
+                # Check if any key starts with ensemble-specific prefixes
+                sample_keys = list(state_dict.keys())[:5]
+                is_ensemble = any(k.startswith(("efficientnet_b4.", "efficientnet_b5.", "xception.")) for k in sample_keys)
+                logger.info(f"Detected model type from state_dict: {'ensemble' if is_ensemble else 'single'}")
+            
+            if is_ensemble:
+                from app.ml.ensemble_architecture import DeepfakeEnsemble
+                logger.info("Loading Ensemble Model (B4 + B5 + Xception)")
+                self.model = DeepfakeEnsemble(pretrained=False)
+            else:
+                # Dynamically detect architecture based on classifier shape
+                # The user might switch between simpler M8 models (DeepfakeDetector) 
+                # and production M12 models (EfficientNetDetector)
+                use_enhanced_arch = False
+                
+                if state_dict:
+                    # Check classifier.1.weight shape to determine hidden size
+                    # Enhanced arch (EfficientNetDetector) has 1024 hidden units at layer 1
+                    # Standard arch (DeepfakeDetector) has 512 hidden units at layer 1
+                    
+                    # Look for classifier weights
+                    if "classifier.1.weight" in state_dict:
+                        weight_shape = state_dict["classifier.1.weight"].shape
+                        if len(weight_shape) > 0 and weight_shape[0] == 1024:
+                            use_enhanced_arch = True
+                            logger.info("Detected Enhanced Architecture (hidden_size=1024)")
+                    
+                    # Alternative check if keys are different
+                    if not use_enhanced_arch and "classifier.3.weight" in state_dict:
+                         # Enhanced arch has more layers (0-9), standard has fewer
+                         use_enhanced_arch = True
+                         logger.info("Detected Enhanced Architecture (deep classifier)")
+
+                if use_enhanced_arch:
+                    from app.ml.ensemble_architecture import EfficientNetDetector
+                    logger.info(f"Loading EfficientNetDetector with backbone: {backbone}")
+                    self.model = EfficientNetDetector(
+                        backbone=backbone,
+                        pretrained=False,
+                    )
+                else:
+                    from app.ml.architecture import DeepfakeDetector
+                    logger.info(f"Loading DeepfakeDetector with backbone: {backbone}")
+                    self.model = DeepfakeDetector(
+                        backbone=backbone,
+                        pretrained=False,
+                    )
             
             # Load state dict
             if isinstance(checkpoint, dict):
@@ -255,28 +365,23 @@ class ModelRegistry:
                 self._threshold = checkpoint.get("threshold", 0.5)
                 
                 # Get metrics
-                metrics = checkpoint.get("metrics", {})
-                if "metadata" in checkpoint:
-                    metrics.update(checkpoint["metadata"].get("metrics", {}))
+                metrics = checkpoint.get("test_metrics") or checkpoint.get("metrics", {})
             else:
                 self.model.load_state_dict(checkpoint)
+                metrics = {}
             
             self.model.to(self._device)
             self.model.eval()
             
-            # Enable inference optimizations
-            if self._device == "cuda":
-                torch.backends.cudnn.benchmark = True
-            
             self.model_info = ModelInfo(
-                name=checkpoint.get("model_name", "deepfake-detector") if isinstance(checkpoint, dict) else "deepfake-detector",
-                version=checkpoint.get("version", "1.0.0") if isinstance(checkpoint, dict) else "1.0.0",
+                name="deepfake-ensemble" if is_ensemble else "deepfake-detector",
+                version="2.0.0-ensemble" if is_ensemble else "1.0.0",
                 device=self._device,
                 is_demo=False,
-                backbone=backbone,
-                calibration_method="temperature_scaling" if self._temperature != 1.0 else None,
-                commit_hash=checkpoint.get("commit_hash") if isinstance(checkpoint, dict) else None,
-                metrics=metrics if isinstance(checkpoint, dict) else None,
+                backbone="ensemble" if is_ensemble else backbone,
+                calibration_method="temperature_scaling",
+                commit_hash=None,
+                metrics=metrics,
                 threshold=self._threshold,
                 temperature=self._temperature,
             )

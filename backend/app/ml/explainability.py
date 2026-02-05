@@ -56,6 +56,25 @@ def generate_demo_heatmap(image: np.ndarray) -> np.ndarray:
     return overlay
 
 
+def _get_target_layer(model: torch.nn.Module) -> torch.nn.Module | None:
+    """Resolve target layer for Grad-CAM from DeepfakeDetector (EfficientNet) or similar."""
+    # DeepfakeDetector has .backbone (timm EfficientNet)
+    if hasattr(model, "backbone"):
+        backbone = model.backbone
+        # timm EfficientNet: last spatial layer is often conv_head or blocks[-1]
+        if hasattr(backbone, "conv_head"):
+            return backbone.conv_head
+        if hasattr(backbone, "blocks") and len(backbone.blocks) > 0:
+            return backbone.blocks[-1]
+        # Fallback: last module that produces 4D output
+        for name, module in reversed(list(backbone.named_children())):
+            if "conv" in name or "block" in name:
+                return module
+    if hasattr(model, "features"):
+        return model.features
+    return None
+
+
 def generate_gradcam_heatmap(
     model: torch.nn.Module,
     input_tensor: torch.Tensor,
@@ -63,66 +82,79 @@ def generate_gradcam_heatmap(
 ) -> np.ndarray:
     """
     Generate Grad-CAM heatmap from model gradients.
+    Supports DeepfakeDetector (EfficientNet backbone) and models with .features.
     
     Args:
         model: PyTorch model
         input_tensor: Input tensor [1, C, H, W]
-        target_layer: Name of target layer for Grad-CAM
+        target_layer: Name of target layer for Grad-CAM (optional, auto-detected)
         
     Returns:
         Heatmap as numpy array [H, W]
     """
-    # For demo model, return uniform heatmap
-    if not hasattr(model, 'features') or target_layer is None:
-        h, w = input_tensor.shape[2], input_tensor.shape[3]
+    device = next(model.parameters()).device
+    input_tensor = input_tensor.to(device)
+    h, w = input_tensor.shape[2], input_tensor.shape[3]
+    
+    target = None
+    if target_layer and hasattr(model, "named_modules"):
+        named = dict(model.named_modules())
+        target = named.get(target_layer)
+    if target is None:
+        target = _get_target_layer(model)
+    
+    if target is None:
+        logger.debug("No target layer for Grad-CAM, using demo heatmap")
         return np.ones((h, w), dtype=np.float32) * 0.5
     
-    # Store activations and gradients
     activations = None
     gradients = None
     
-    def forward_hook(module, input, output):
+    def forward_hook(module: torch.nn.Module, input: tuple, output: torch.Tensor) -> None:
         nonlocal activations
         activations = output.detach()
     
-    def backward_hook(module, grad_input, grad_output):
+    def backward_hook(module: torch.nn.Module, grad_input: tuple, grad_output: tuple) -> None:
         nonlocal gradients
-        gradients = grad_output[0].detach()
+        if grad_output[0] is not None:
+            gradients = grad_output[0].detach()
     
-    # Register hooks
-    target = dict(model.named_modules())[target_layer]
     fh = target.register_forward_hook(forward_hook)
     bh = target.register_full_backward_hook(backward_hook)
     
     try:
-        # Forward pass
         model.eval()
-        input_tensor.requires_grad = True
+        if input_tensor.requires_grad is False:
+            input_tensor = input_tensor.requires_grad_(True)
         output = model(input_tensor)
-        
-        # Backward pass on fake class
+        # Binary classifier: output [B, 1]; high value = fake
+        if output.shape[-1] == 1:
+            scalar = output[0, 0]
+        else:
+            scalar = output[0, 1] if output.shape[-1] > 1 else output[0, 0]
         model.zero_grad()
-        output[0, 1].backward()  # Gradient w.r.t. fake class
+        scalar.backward()
         
-        # Compute Grad-CAM
-        weights = gradients.mean(dim=(2, 3), keepdim=True)
-        cam = (weights * activations).sum(dim=1, keepdim=True)
+        if gradients is None or activations is None:
+            return np.ones((h, w), dtype=np.float32) * 0.5
+        
+        # Handle 4D (B,C,H,W) or 2D (B,C) activations
+        if activations.dim() == 4:
+            weights = gradients.mean(dim=(2, 3), keepdim=True)
+            cam = (weights * activations).sum(dim=1, keepdim=True)
+        else:
+            return np.ones((h, w), dtype=np.float32) * 0.5
+        
         cam = torch.relu(cam)
-        
-        # Normalize
         cam = cam - cam.min()
         cam = cam / (cam.max() + 1e-8)
-        
-        # Resize to input size
         cam = torch.nn.functional.interpolate(
-            cam,
-            size=input_tensor.shape[2:],
-            mode='bilinear',
-            align_corners=False,
+            cam, size=(h, w), mode="bilinear", align_corners=False
         )
-        
         return cam.squeeze().cpu().numpy()
-        
+    except Exception as e:
+        logger.warning(f"Grad-CAM failed: {e}, using demo heatmap")
+        return np.ones((h, w), dtype=np.float32) * 0.5
     finally:
         fh.remove()
         bh.remove()
@@ -167,6 +199,7 @@ def generate_heatmap_bytes(
 ) -> bytes:
     """
     Generate heatmap overlay and return as PNG bytes.
+    Falls back to demo heatmap if Grad-CAM fails.
     
     Args:
         image_bytes: Original image bytes
@@ -177,16 +210,16 @@ def generate_heatmap_bytes(
     Returns:
         Heatmap overlay as PNG bytes
     """
-    # Load image
     image = bytes_to_numpy(image_bytes)
     
-    if is_demo or model is None:
-        # Use demo heatmap generation
+    if is_demo or model is None or input_tensor is None:
         overlay = generate_demo_heatmap(image)
     else:
-        # Generate Grad-CAM heatmap
-        heatmap = generate_gradcam_heatmap(model, input_tensor)
-        overlay = create_heatmap_overlay(image, heatmap)
+        try:
+            heatmap = generate_gradcam_heatmap(model, input_tensor)
+            overlay = create_heatmap_overlay(image, heatmap)
+        except Exception as e:
+            logger.debug(f"Grad-CAM failed, using demo heatmap: {e}")
+            overlay = generate_demo_heatmap(image)
     
-    # Convert to bytes
     return numpy_to_bytes(overlay, "png")

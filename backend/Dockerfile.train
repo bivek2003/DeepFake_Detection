@@ -1,6 +1,6 @@
-# Training Dockerfile - CUDA-enabled PyTorch for GPU training
-# Supports RTX 50 series (sm_120) with PyTorch nightly
-FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04
+# Training Dockerfile - CUDA-enabled PyTorch for RTX 5070 (sm_120)
+# Uses PyTorch nightly with CUDA 12.8 for Blackwell architecture support
+FROM nvidia/cuda:12.8.0-cudnn-runtime-ubuntu22.04
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -8,8 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    DEBIAN_FRONTEND=noninteractive \
-    TORCH_CUDA_ARCH_LIST="5.0;6.0;7.0;7.5;8.0;8.6;9.0;12.0"
+    DEBIAN_FRONTEND=noninteractive
 
 # Install Python 3.11 and system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -38,12 +37,27 @@ WORKDIR /app
 # Upgrade pip
 RUN python -m pip install --upgrade pip setuptools wheel
 
-# Install PyTorch with CUDA 12.6 support (latest stable with wide architecture support)
-RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+# Install PyTorch nightly with CUDA 12.8 support FIRST (for sm_120/RTX 5070)
+# This MUST come before other packages to avoid downgrade
+RUN pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128
 
-# Copy and install training requirements
-COPY requirements-train.txt ./
-RUN pip install -r requirements-train.txt
+# Install packages that don't depend on torch version
+RUN pip install numpy==1.26.4 Pillow opencv-python-headless pandas scipy scikit-learn \
+    tqdm tensorboard wandb pyyaml python-dotenv av gdown requests \
+    aiofiles aiosqlite alembic asyncpg bcrypt celery cryptography \
+    fastapi httpx passlib prometheus-client pydantic pydantic-settings \
+    python-jose python-multipart redis reportlab SQLAlchemy uvicorn matplotlib \
+    huggingface_hub safetensors
+
+# Install torch-dependent packages WITHOUT allowing torch downgrade
+RUN pip install --no-deps timm torchmetrics albumentations albucore==0.0.24 facenet-pytorch decord
+
+# Install remaining dependencies for the above packages
+RUN pip install einops simsimd stringzilla lightning-utilities || true
+
+# Verify PyTorch nightly is still installed
+RUN python -c "import torch; print(f'PyTorch version: {torch.__version__}')" && \
+    python -c "import torch; assert 'dev' in torch.__version__ or '2.11' in torch.__version__, f'Wrong PyTorch version: {torch.__version__}'"
 
 # Copy application code
 COPY . .

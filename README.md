@@ -196,10 +196,15 @@ make clean && make up
 make migrate
 ```
 
+**"Network Error" when analyzing image/video**
+- Open the app via **http://localhost:3000** (nginx), not http://localhost:5173. The frontend uses same-origin API calls so nginx can proxy `/api` to the backend.
+- Restart frontend after changing API config: `docker compose restart frontend`
+- Ensure backend is up: `curl http://localhost:8000/api/v1/healthz`
+
 **Frontend can't connect to backend**
 ```bash
 # Ensure nginx is routing correctly
-docker-compose logs nginx
+docker compose logs nginx
 ```
 
 ## License

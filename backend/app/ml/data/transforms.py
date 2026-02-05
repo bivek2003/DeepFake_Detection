@@ -89,8 +89,7 @@ def get_train_transforms(
                 num_holes_range=(1, 4),
                 hole_height_range=(image_size // 16, image_size // 8),
                 hole_width_range=(image_size // 16, image_size // 8),
-                fill="constant",
-                fill_value=0,
+                fill=0,
                 p=0.3
             ),
         ])

@@ -119,13 +119,13 @@ class DeepfakeDetector(nn.Module):
         if use_attention:
             self.attention_pool = AttentionPooling(self.feature_dim)
         
-        # Classification head
+        # Classification head (matching trained checkpoint architecture)
         self.classifier = nn.Sequential(
             nn.Dropout(dropout_rate),
             nn.Linear(self.feature_dim, hidden_size),
             nn.BatchNorm1d(hidden_size),
             nn.ReLU(inplace=True),
-            nn.Dropout(dropout_rate * 0.6),  # Reduced dropout in second layer
+            nn.Dropout(dropout_rate * 0.5),
             nn.Linear(hidden_size, num_classes),
         )
         
@@ -367,7 +367,7 @@ def create_model(
     
     if checkpoint_path:
         print(f"Loading checkpoint from {checkpoint_path}")
-        checkpoint = torch.load(checkpoint_path, map_location=device)
+        checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
         
         if "model_state_dict" in checkpoint:
             model.load_state_dict(checkpoint["model_state_dict"])

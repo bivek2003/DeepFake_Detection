@@ -8,7 +8,10 @@ services:
       dockerfile: Dockerfile
     container_name: deepfake-frontend
     environment:
-      - VITE_API_URL=http://localhost:8000
+      # Empty = same-origin; browser sends /api to same host, nginx or Vite proxies to backend
+      - VITE_API_URL=
+      # When using Vite dev (port 5173), proxy target must be backend container
+      - VITE_API_PROXY_TARGET=http://backend:8000
     volumes:
       - ./frontend/src:/app/src:ro
       - ./frontend/public:/app/public:ro
@@ -37,7 +40,7 @@ services:
       - ./backend/app:/app/app:ro
       - uploads:/app/uploads
       - assets:/app/assets
-      - weights:/app/weights
+      - ./checkpoints:/app/weights:ro
     ports:
       - "8000:8000"
     networks:
@@ -75,7 +78,7 @@ services:
       - ./backend/app:/app/app:ro
       - uploads:/app/uploads
       - assets:/app/assets
-      - weights:/app/weights
+      - ./checkpoints:/app/weights:ro
     networks:
       - deepfake-network
     depends_on:
@@ -152,4 +155,3 @@ volumes:
   redis_data:
   uploads:
   assets:
-  weights:

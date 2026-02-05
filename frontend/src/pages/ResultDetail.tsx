@@ -133,12 +133,15 @@ export default function ResultDetail() {
         </>
       )}
 
-      {/* Image heatmap (if available) */}
-      {!isVideo && result.suspicious_frames.length > 0 && (
-        <HeatmapViewer
-          heatmapUrl={result.suspicious_frames[0]?.overlay_url || null}
-        />
-      )}
+      {/* Heatmap: image uses heatmap_url; video uses first suspicious frame overlay */}
+      <HeatmapViewer
+        heatmapUrl={
+          result.heatmap_url ||
+          result.suspicious_frames[0]?.overlay_url ||
+          null
+        }
+        title={isVideo ? 'Suspicious frame heatmap' : 'Heatmap Analysis'}
+      />
 
       {/* Metadata */}
       <div className="card">

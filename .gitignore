@@ -82,9 +82,12 @@ docker-compose.override.yml
 # =============================================================================
 # Application Data
 # =============================================================================
+datasets/
 uploads/
 assets/
 weights/
+checkpoint/
+checkpoints/
 *.pth
 *.pt
 *.onnx

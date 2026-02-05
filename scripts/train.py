@@ -33,7 +33,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts, OneCycleLR
 
@@ -51,24 +51,24 @@ from app.ml.data.datasets import create_dataloaders, CombinedDataset, DeepfakeDa
 from app.ml.data.transforms import get_train_transforms, get_val_transforms
 
 
-# Default training configuration
+# Default training configuration (target: >90% F1/AUC/accuracy)
 DEFAULT_CONFIG = {
     "model": {
         "backbone": "efficientnet_b4",
         "pretrained": True,
-        "dropout": 0.5,
+        "dropout": 0.4,
         "hidden_size": 512,
     },
     "training": {
-        "epochs": 30,
+        "epochs": 50,
         "batch_size": 32,
-        "learning_rate": 1e-4,
-        "weight_decay": 1e-5,
-        "warmup_epochs": 2,
+        "learning_rate": 8e-5,
+        "weight_decay": 2e-5,
+        "warmup_epochs": 3,
         "grad_accumulation": 2,
         "mixed_precision": True,
-        "early_stop_patience": 5,
-        "min_delta": 0.001,
+        "early_stop_patience": 10,
+        "min_delta": 0.0005,
     },
     "data": {
         "datasets_dir": "/app/datasets",
@@ -137,7 +137,7 @@ class Trainer:
         
         # Mixed precision
         self.use_amp = config["training"]["mixed_precision"]
-        self.scaler = GradScaler() if self.use_amp else None
+        self.scaler = GradScaler("cuda") if self.use_amp else None
     
     def _init_model(self):
         """Initialize model."""
@@ -269,7 +269,7 @@ class Trainer:
             
             # Forward pass with mixed precision
             if self.use_amp:
-                with autocast():
+                with autocast("cuda"):
                     outputs = self.model(images)
                     loss = self.criterion(outputs.squeeze(), labels) / grad_accumulation
                 
@@ -543,6 +543,18 @@ class Trainer:
         
         with open(self.checkpoint_dir / "training_results.json", "w") as f:
             json.dump(final_metrics, f, indent=2)
+        
+        # Update best_model.pt with test_metrics so API shows test accuracy
+        best_path = self.checkpoint_dir / "best_model.pt"
+        if best_path.exists():
+            try:
+                best_ckpt = torch.load(best_path, map_location=self.device)
+                if isinstance(best_ckpt, dict):
+                    best_ckpt["test_metrics"] = test_metrics
+                    torch.save(best_ckpt, best_path)
+                    print(f"Updated {best_path} with test metrics (acc: {test_metrics['accuracy']:.4f})")
+            except Exception as e:
+                print(f"Could not update best checkpoint with test_metrics: {e}")
         
         if self.writer:
             self.writer.close()

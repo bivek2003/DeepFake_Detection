@@ -2,11 +2,13 @@
 Job status and results endpoints.
 """
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.deps import DBSession
 from app.api.schemas import (
+    AnalysisListItem,
     AnalysisStatus,
+    AnalysisType,
     ChartData,
     FrameScore,
     JobResult,
@@ -18,6 +20,31 @@ from app.persistence import crud
 logger = get_logger(__name__)
 
 router = APIRouter()
+
+
+@router.get(
+    "/jobs",
+    response_model=list[AnalysisListItem],
+    summary="List recent analyses",
+    description="Get recent analyses for dashboard.",
+)
+async def list_jobs(
+    db: DBSession,
+    limit: int = Query(20, ge=1, le=100),
+) -> list[AnalysisListItem]:
+    """List recent analyses (image and video)."""
+    analyses = await crud.get_recent_analyses(db, limit=limit)
+    return [
+        AnalysisListItem(
+            id=a.id,
+            type=a.type,
+            status=a.status,
+            verdict=a.verdict,
+            confidence=a.confidence,
+            created_at=a.created_at,
+        )
+        for a in analyses
+    ]
 
 
 @router.get(
@@ -129,11 +156,14 @@ async def get_job_result(
     # Get assets
     assets = await crud.get_assets_for_analysis(db, job_id)
     
+    heatmap_url = None
     report_url = None
     timeline_chart_url = None
     
     for asset in assets:
-        if asset.kind == "report":
+        if asset.kind == "heatmap":
+            heatmap_url = f"/api/v1/assets/{asset.path}"
+        elif asset.kind == "report":
             report_url = f"/api/v1/reports/{job_id}.pdf"
         elif asset.kind == "timeline_chart":
             timeline_chart_url = f"/api/v1/assets/{asset.path}"
@@ -176,6 +206,7 @@ async def get_job_result(
         frame_scores=frame_scores,
         suspicious_frames=suspicious_frames,
         chart_data=chart_data,
+        heatmap_url=heatmap_url,
         report_url=report_url,
         timeline_chart_url=timeline_chart_url,
     )

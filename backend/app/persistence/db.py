@@ -21,25 +21,30 @@ Base = declarative_base()
 _engine: AsyncEngine | None = None
 
 
+def create_engine() -> AsyncEngine:
+    """Create a new async database engine."""
+    settings = get_settings()
+    
+    # Convert postgresql:// to postgresql+asyncpg://
+    database_url = settings.database_url
+    if database_url.startswith("postgresql://"):
+        database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    
+    return create_async_engine(
+        database_url,
+        echo=settings.debug,
+        pool_pre_ping=True,
+        pool_size=5,
+        max_overflow=10,
+    )
+
+
 def get_async_engine() -> AsyncEngine:
-    """Get or create async database engine."""
+    """Get or create async database engine (cached)."""
     global _engine
     
     if _engine is None:
-        settings = get_settings()
-        
-        # Convert postgresql:// to postgresql+asyncpg://
-        database_url = settings.database_url
-        if database_url.startswith("postgresql://"):
-            database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-        
-        _engine = create_async_engine(
-            database_url,
-            echo=settings.debug,
-            pool_pre_ping=True,
-            pool_size=5,
-            max_overflow=10,
-        )
+        _engine = create_engine()
     
     return _engine
 

@@ -14,6 +14,7 @@ export default function HeatmapViewer({
   title = 'Heatmap Analysis',
 }: HeatmapViewerProps) {
   const [showHeatmap, setShowHeatmap] = useState(true);
+  const [imgError, setImgError] = useState(false);
 
   if (!heatmapUrl) {
     return (
@@ -35,6 +36,7 @@ export default function HeatmapViewer({
         <button
           onClick={() => setShowHeatmap(!showHeatmap)}
           className="btn btn-secondary text-sm"
+          type="button"
         >
           {showHeatmap ? (
             <>
@@ -50,12 +52,20 @@ export default function HeatmapViewer({
         </button>
       </div>
 
-      <div className="relative rounded-lg overflow-hidden bg-gray-100">
-        <img
-          src={showHeatmap ? displayUrl : originalUrl || displayUrl}
-          alt="Analysis visualization"
-          className="w-full h-auto"
-        />
+      <div className="relative rounded-lg overflow-hidden bg-gray-100 min-h-[200px]">
+        {imgError ? (
+          <div className="flex items-center justify-center p-8 text-gray-500">
+            <p>Could not load heatmap image</p>
+          </div>
+        ) : (
+          <img
+            src={showHeatmap ? displayUrl : originalUrl || displayUrl}
+            alt="Analysis visualization"
+            className="w-full h-auto max-h-[500px] object-contain"
+            onError={() => setImgError(true)}
+            crossOrigin="anonymous"
+          />
+        )}
       </div>
 
       <div className="mt-4 text-sm text-gray-500">

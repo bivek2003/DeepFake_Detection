@@ -76,9 +76,19 @@ export interface JobResult {
   frame_scores: FrameScore[];
   suspicious_frames: FrameScore[];
   chart_data: ChartData | null;
+  heatmap_url: string | null;
   report_url: string | null;
   timeline_chart_url: string | null;
   disclaimer: string;
+}
+
+export interface AnalysisListItem {
+  id: string;
+  type: 'image' | 'video';
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  verdict: 'REAL' | 'FAKE' | 'UNCERTAIN' | null;
+  confidence: number | null;
+  created_at: string;
 }
 
 export interface ModelInfo {
@@ -91,10 +101,28 @@ export interface ModelInfo {
   metrics: Record<string, unknown> | null;
 }
 
+export interface ModelItem {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+  size_mb: number;
+  active: boolean;
+}
+
 // API Functions
 export async function checkHealth(): Promise<HealthCheck> {
   const response = await api.get<HealthCheck>('/api/v1/healthz');
   return response.data;
+}
+
+export async function getModels(): Promise<ModelItem[]> {
+  const response = await api.get<ModelItem[]>('/api/v1/model/list');
+  return response.data;
+}
+
+export async function switchModel(filename: string): Promise<void> {
+  await api.post('/api/v1/model/switch', { filename });
 }
 
 export async function analyzeImage(file: File): Promise<ImageAnalysisResult> {
@@ -140,15 +168,24 @@ export async function getModelInfo(): Promise<ModelInfo> {
   return response.data;
 }
 
+export async function getRecentAnalyses(limit = 20): Promise<AnalysisListItem[]> {
+  const response = await api.get<AnalysisListItem[]>('/api/v1/jobs', {
+    params: { limit },
+  });
+  return response.data;
+}
+
 export function getReportUrl(jobId: string): string {
   return `${API_BASE_URL}/api/v1/reports/${jobId}.pdf`;
 }
 
 export function getAssetUrl(path: string): string {
+  if (!path) return '';
+  // Already full path from API (e.g. /api/v1/assets/heatmaps/xxx.png)
   if (path.startsWith('/')) {
-    return `${API_BASE_URL}${path}`;
+    return API_BASE_URL ? `${API_BASE_URL.replace(/\/$/, '')}${path}` : path;
   }
-  return `${API_BASE_URL}/api/v1/assets/${path}`;
+  return `${API_BASE_URL || ''}/api/v1/assets/${path}`.replace(/\/+/g, '/');
 }
 
 // Error handling

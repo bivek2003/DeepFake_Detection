@@ -12,13 +12,19 @@ help:
 	@echo "  make logs-f      - Follow all service logs"
 	@echo ""
 	@echo "Training (GPU):"
-	@echo "  make train-build   - Build training Docker image"
-	@echo "  make train-shell   - Start training container with GPU"
-	@echo "  make train         - Run full training pipeline"
-	@echo "  make download-data - Download datasets"
-	@echo "  make extract-faces - Extract faces from videos"
-	@echo "  make tensorboard   - Start TensorBoard monitoring"
-	@echo "  make evaluate      - Evaluate trained model"
+	@echo "  make train-build     - Build training Docker image"
+	@echo "  make train-shell     - Start training container with GPU"
+	@echo "  make train           - Run training (Celeb-DF + FaceForensics, >90% target)"
+	@echo "  make train-all       - Extract faces, prepare splits, then train (full pipeline)"
+	@echo "  make train-production - Run PRODUCTION training (ensemble, 96%+ accuracy)"
+	@echo "  make train-quick     - Run quick training (single model)"
+	@echo "  make download-data   - Download datasets (Celeb-DF, DFDC preview)"
+	@echo "  make download-faceforensics - Download FaceForensics++ (~40GB, use EU2 server)"
+	@echo "  make extract-faces   - Extract faces from Celeb-DF and FaceForensics"
+	@echo "  make prepare-ff-splits - Create FaceForensics split files"
+	@echo "  make tensorboard     - Start TensorBoard monitoring"
+	@echo "  make evaluate        - Evaluate trained model"
+	@echo "  make gpu-check       - Verify GPU is accessible"
 	@echo ""
 	@echo "Testing:"
 	@echo "  make test        - Run all tests"
@@ -80,9 +86,36 @@ train-shell:
 	docker compose -f docker-compose.train.yml run --rm trainer bash
 
 train:
-	@echo "Starting full training pipeline..."
+	@echo "Starting training pipeline (uses Celeb-DF + FaceForensics when available)..."
 	@mkdir -p datasets checkpoints logs
-	docker compose -f docker-compose.train.yml run --rm trainer python scripts/train.py
+	@echo "Tip: Run 'make extract-faces' first to include FaceForensics in training."
+	docker compose -f docker-compose.train.yml run --rm trainer python scripts/train.py --config configs/train_config.yaml
+
+train-production:
+	@echo "Starting PRODUCTION training (ensemble, max accuracy)..."
+	@mkdir -p datasets checkpoints logs
+	docker compose -f docker-compose.train.yml run --rm trainer python scripts/train_production.py \
+		--config configs/production_config.yaml \
+		--data-root /app/datasets \
+		--model ensemble \
+		--epochs 100 \
+		--batch-size 16
+
+download-faceforensics:
+	@echo "Downloading FaceForensics++ (EU2 server, ~40GB, may take hours)..."
+	@mkdir -p datasets
+	docker compose -f docker-compose.train.yml run --rm -e NVIDIA_VISIBLE_DEVICES="" trainer \
+		python /app/datasets/ff_download.py /app/datasets/FaceForensics \
+		--datasets original Deepfakes Face2Face FaceSwap -c c23 --auto-accept --server EU2
+
+train-quick:
+	@echo "Starting quick training (EfficientNet-B4 only)..."
+	@mkdir -p datasets checkpoints logs
+	docker compose -f docker-compose.train.yml run --rm trainer python scripts/train_production.py \
+		--config configs/production_config.yaml \
+		--model efficientnet_b4 \
+		--epochs 30 \
+		--batch-size 32
 
 download-data:
 	@echo "Downloading datasets..."
@@ -90,8 +123,15 @@ download-data:
 	docker compose -f docker-compose.train.yml run --rm trainer python scripts/download_datasets.py
 
 extract-faces:
-	@echo "Extracting faces from videos..."
-	docker compose -f docker-compose.train.yml run --rm trainer python scripts/extract_faces.py
+	@echo "Extracting faces from Celeb-DF and FaceForensics videos..."
+	docker compose -f docker-compose.train.yml run --rm trainer python scripts/extract_faces.py --dataset all
+
+prepare-ff-splits:
+	@echo "Creating FaceForensics split files (ff_train.txt, ff_val.txt, ff_test.txt)..."
+	docker compose -f docker-compose.train.yml run --rm trainer python scripts/prepare_ff_splits.py
+
+train-all: extract-faces prepare-ff-splits train
+	@echo "Full pipeline complete: extract faces -> prepare splits -> train"
 
 tensorboard:
 	@echo "Starting TensorBoard..."

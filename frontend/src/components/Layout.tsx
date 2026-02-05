@@ -5,7 +5,7 @@ import DemoBanner from './DemoBanner';
 import { getModelInfo, ModelInfo } from '../api';
 
 const navItems = [
-  { path: '/', label: 'Dashboard', icon: Home },
+  { path: '/dashboard', label: 'Dashboard', icon: Home },
   { path: '/upload/image', label: 'Image Analysis', icon: Upload },
   { path: '/upload/video', label: 'Video Analysis', icon: Video },
 ];
@@ -30,7 +30,7 @@ export default function Layout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-3">
+            <Link to="/dashboard" className="flex items-center gap-3">
               <div className="p-2 bg-primary-600 rounded-lg">
                 <Shield className="w-6 h-6 text-white" />
               </div>
@@ -49,11 +49,10 @@ export default function Layout() {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'bg-primary-50 text-primary-700'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                    className={`px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors ${isActive
+                      ? 'bg-primary-50 text-primary-700'
+                      : 'text-gray-600 hover:bg-gray-100'
+                      }`}
                   >
                     <Icon className="w-4 h-4" />
                     {item.label}

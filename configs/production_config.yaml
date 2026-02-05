@@ -1,0 +1,123 @@
+# Production Training Configuration
+# Target: Maximum accuracy (~96%+)
+# Model: Ensemble (EfficientNet-B4 + B7 + XceptionNet)
+
+# =============================================================================
+# Model Configuration
+# =============================================================================
+model:
+  type: ensemble  # Options: ensemble, efficientnet_b4, efficientnet_b7, xception
+  pretrained: true
+  dropout: 0.4
+  fusion_method: attention  # Options: attention, weighted, average
+
+# =============================================================================
+# Data Configuration  
+# =============================================================================
+data:
+  root: /app/datasets
+  image_size: 380
+  datasets:
+    - celeb-df
+    - faceforensics
+    - dfdc
+  
+# =============================================================================
+# Training Configuration
+# =============================================================================
+training:
+  epochs: 100
+  batch_size: 16  # Per GPU, effective = batch_size * gradient_accumulation * num_gpus
+  gradient_accumulation: 4  # Effective batch size = 64
+  
+  # Optimizer
+  optimizer: adamw
+  backbone_lr: 1.0e-5  # Lower LR for pretrained backbone
+  head_lr: 1.0e-4      # Higher LR for classifier head
+  weight_decay: 0.01
+  
+  # Learning rate schedule
+  scheduler: cosine_warmup
+  warmup_ratio: 0.1  # 10% of training for warmup
+  min_lr: 1.0e-7
+  
+  # Regularization
+  label_smoothing: 0.1
+  mixup_alpha: 0.2
+  cutmix_alpha: 1.0
+  
+  # Early stopping
+  patience: 15
+  min_delta: 0.001
+
+# =============================================================================
+# Loss Configuration
+# =============================================================================
+loss:
+  type: combined  # BCE + Focal
+  bce_weight: 0.5
+  focal_weight: 0.5
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+
+# =============================================================================
+# Augmentation Configuration
+# =============================================================================
+augmentation:
+  # Geometric
+  horizontal_flip: 0.5
+  rotation_limit: 15
+  scale_limit: 0.2
+  shift_limit: 0.1
+  
+  # Color
+  brightness_limit: 0.2
+  contrast_limit: 0.2
+  saturation_limit: 0.2
+  hue_limit: 0.1
+  
+  # Compression artifacts (critical for deepfake detection)
+  jpeg_quality_range: [30, 100]
+  downscale_range: [0.5, 1.0]
+  
+  # Noise
+  gaussian_noise_std: 0.03
+  
+  # Dropout
+  coarse_dropout:
+    num_holes: [1, 8]
+    hole_size: [0.05, 0.15]
+
+# =============================================================================
+# Validation Configuration
+# =============================================================================
+validation:
+  interval: 1  # Validate every epoch
+  tta: true    # Test-time augmentation for final evaluation
+  
+# =============================================================================
+# Checkpointing
+# =============================================================================
+checkpoint:
+  dir: /app/checkpoints
+  save_best: true
+  save_last: true
+  save_interval: 10  # Save every N epochs
+
+# =============================================================================
+# Logging
+# =============================================================================
+logging:
+  dir: /app/logs
+  tensorboard: true
+  wandb: false  # Set to true if you have wandb configured
+  log_interval: 50  # Log every N batches
+
+# =============================================================================
+# Hardware Configuration
+# =============================================================================
+hardware:
+  num_workers: 4
+  pin_memory: true
+  mixed_precision: true  # FP16 training
+  cudnn_benchmark: true

@@ -18,6 +18,7 @@ services:
     volumes:
       - ./backend:/app
       - ./scripts:/app/scripts
+      - ./configs:/app/configs
       - ./datasets:/app/datasets
       - ./checkpoints:/app/checkpoints
       - ./logs:/app/logs

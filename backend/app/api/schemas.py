@@ -89,6 +89,16 @@ class ChartData(BaseModel):
     distribution: dict[str, Any] = Field(..., description="Score distribution data")
 
 
+class AnalysisListItem(BaseModel):
+    """Single analysis for list/dashboard."""
+    id: str = Field(..., description="Analysis/Job ID")
+    type: AnalysisType = Field(..., description="image or video")
+    status: AnalysisStatus = Field(..., description="Status")
+    verdict: Verdict | None = Field(None, description="Verdict when completed")
+    confidence: float | None = Field(None, ge=0.0, le=1.0, description="Confidence when completed")
+    created_at: datetime = Field(..., description="Creation timestamp")
+
+
 class JobResult(BaseModel):
     """Complete job result with analysis details."""
     job_id: str = Field(..., description="Job ID")
@@ -112,6 +122,7 @@ class JobResult(BaseModel):
     chart_data: ChartData | None = Field(None, description="Visualization data")
     
     # Asset URLs
+    heatmap_url: str | None = Field(None, description="URL to heatmap overlay (image analysis)")
     report_url: str | None = Field(None, description="URL to PDF report")
     timeline_chart_url: str | None = Field(None, description="URL to timeline chart image")
     

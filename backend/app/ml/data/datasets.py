@@ -57,7 +57,7 @@ class DeepfakeDataset(Dataset):
         self._print_stats()
     
     def _load_from_split(self, split_file: str):
-        """Load samples from split file."""
+        """Load samples from split file. Supports both image paths (.jpg) and video paths (.mp4)."""
         split_path = Path(split_file)
         
         with open(split_path, 'r') as f:
@@ -71,14 +71,20 @@ class DeepfakeDataset(Dataset):
                     path = parts[0]
                     label = int(parts[1])
                     
-                    full_path = self.root_dir / path
+                    full_path = Path(path) if Path(path).is_absolute() else self.root_dir / path
                     if full_path.exists():
-                        # Add all images in this path
                         if full_path.is_dir():
                             for img_path in full_path.glob("*.jpg"):
                                 self.samples.append((str(img_path), label))
-                        else:
+                        elif full_path.suffix.lower() in ('.jpg', '.jpeg', '.png'):
                             self.samples.append((str(full_path), label))
+                        elif full_path.suffix.lower() in ('.mp4', '.avi', '.mov'):
+                            # Video path: look for extracted faces in faces/{video_stem}/
+                            # e.g. Celeb-DF-v2/Celeb-real/id12_0004.mp4 -> faces/Celeb-DF-v2/Celeb-real/id12_0004/
+                            faces_dir = self.root_dir / "faces" / full_path.relative_to(self.root_dir).with_suffix("")
+                            if faces_dir.exists():
+                                for img_path in faces_dir.glob("*.jpg"):
+                                    self.samples.append((str(img_path), label))
     
     def _scan_directory(self):
         """Scan directory structure for samples."""
@@ -117,14 +123,19 @@ class DeepfakeDataset(Dataset):
     def __len__(self) -> int:
         return len(self.samples)
     
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, int]:
+    def __getitem__(self, idx: int, _retry: int = 0) -> Tuple[torch.Tensor, int]:
         img_path, label = self.samples[idx]
         
         # Load image
         image = cv2.imread(img_path)
         if image is None:
-            # Return a random valid sample on error
-            return self.__getitem__(random.randint(0, len(self) - 1))
+            # Retry with different sample (max 10 to avoid RecursionError)
+            if _retry >= 10:
+                raise RuntimeError(
+                    f"Failed to load image after 10 retries. Last path: {img_path}. "
+                    "Check that split files reference .jpg face images, not .mp4 videos."
+                )
+            return self.__getitem__(random.randint(0, len(self) - 1), _retry + 1)
         
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
@@ -294,13 +305,15 @@ class CombinedDataset(Dataset):
     def __len__(self) -> int:
         return len(self.samples)
     
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, int]:
+    def __getitem__(self, idx: int, _retry: int = 0) -> Tuple[torch.Tensor, int]:
         img_path, label = self.samples[idx]
         
         # Load image
         image = cv2.imread(img_path)
         if image is None:
-            return self.__getitem__(random.randint(0, len(self) - 1))
+            if _retry >= 10:
+                raise RuntimeError(f"Failed to load image after 10 retries: {img_path}")
+            return self.__getitem__(random.randint(0, len(self) - 1), _retry + 1)
         
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
@@ -318,6 +331,74 @@ class CombinedDataset(Dataset):
         class_counts = [max(1, labels.count(0)), max(1, labels.count(1))]
         weights = [1.0 / class_counts[label] for label in labels]
         return torch.DoubleTensor(weights)
+
+
+def _ensure_ff_splits(root_path: Path, splits_dir: Path, ff_faces: Path, train_ratio: float = 0.7, val_ratio: float = 0.15, seed: int = 42):
+    """Create ff_train.txt, ff_val.txt, ff_test.txt from faces/FaceForensics if missing."""
+    random.seed(seed)
+    root_path = Path(root_path).resolve()
+    
+    real_samples = []
+    fake_samples = []
+    
+    # Real: original_sequences, original/
+    for real_dir in ["original_sequences", "original"]:
+        real_path = ff_faces / real_dir
+        if real_path.exists():
+            for img_path in real_path.rglob("*.jpg"):
+                real_samples.append((str(img_path), 0))
+            break
+    
+    # Fake: manipulated_sequences, Deepfakes, Face2Face, FaceSwap, NeuralTextures
+    manipulated = ff_faces / "manipulated_sequences"
+    if manipulated.exists():
+        for img_path in manipulated.rglob("*.jpg"):
+            fake_samples.append((str(img_path), 1))
+    else:
+        for method in ["Deepfakes", "Face2Face", "FaceSwap", "NeuralTextures"]:
+            method_dir = ff_faces / method
+            if method_dir.exists():
+                for img_path in method_dir.rglob("*.jpg"):
+                    fake_samples.append((str(img_path), 1))
+    
+    if not real_samples and not fake_samples:
+        return
+    
+    # Build splits with relative paths (root_path) for portability
+    def to_portable(p: str) -> str:
+        try:
+            rel = Path(p).relative_to(root_path)
+            return str(rel)
+        except ValueError:
+            return p
+    
+    splits = {"train": [], "val": [], "test": []}
+    for samples, label in [(real_samples, 0), (fake_samples, 1)]:
+        if not samples:
+            continue
+        random.shuffle(samples)
+        n = len(samples)
+        train_end = int(n * train_ratio)
+        val_end = int(n * (train_ratio + val_ratio))
+        for i, (path, _) in enumerate(samples):
+            entry = (to_portable(path), label)
+            if i < train_end:
+                splits["train"].append(entry)
+            elif i < val_end:
+                splits["val"].append(entry)
+            else:
+                splits["test"].append(entry)
+    
+    for split in splits.values():
+        random.shuffle(split)
+    
+    for split_name, entries in splits.items():
+        if entries:
+            out = splits_dir / f"ff_{split_name}.txt"
+            with open(out, "w") as f:
+                for path, label in entries:
+                    f.write(f"{path} {label}\n")
+            print(f"Created {out.name}: {len(entries)} samples")
 
 
 def create_dataloaders(
@@ -350,24 +431,34 @@ def create_dataloaders(
     val_transform = val_transform or get_val_transforms()
     
     root_path = Path(root_dir)
+    splits_dir = root_path / "splits"
+    faces_dir = root_path / "faces"
     
-    # Create datasets
+    # Create datasets (combine ALL available datasets)
     train_datasets = []
     val_datasets = []
     test_datasets = []
     
-    # Celeb-DF
-    celebdf_splits = root_path / "splits"
-    if (celebdf_splits / "celebdf_train.txt").exists():
+    # Celeb-DF / face-based splits (train.txt, val.txt, test.txt) - direct image paths
+    if (splits_dir / "train.txt").exists() and (splits_dir / "val.txt").exists():
+        train_datasets.append(DeepfakeDataset(root_dir, str(splits_dir / "train.txt"), train_transform))
+        val_datasets.append(DeepfakeDataset(root_dir, str(splits_dir / "val.txt"), val_transform))
+        test_datasets.append(DeepfakeDataset(root_dir, str(splits_dir / "test.txt") if (splits_dir / "test.txt").exists() else str(splits_dir / "val.txt"), val_transform))
+    # Celeb-DF (video paths -> resolved to faces/) when no train.txt
+    elif (splits_dir / "celebdf_train.txt").exists():
         train_datasets.append(CelebDFDataset(root_dir, "train", train_transform))
         val_datasets.append(CelebDFDataset(root_dir, "val", val_transform))
         test_datasets.append(CelebDFDataset(root_dir, "test", val_transform))
     
-    # FaceForensics++
-    if (celebdf_splits / "ff_train.txt").exists():
-        train_datasets.append(FaceForensicsDataset(root_dir, "train", train_transform))
-        val_datasets.append(FaceForensicsDataset(root_dir, "val", val_transform))
-        test_datasets.append(FaceForensicsDataset(root_dir, "test", val_transform))
+    # FaceForensics++: use ff_*.txt if present, else auto-create from faces/FaceForensics
+    ff_faces = faces_dir / "FaceForensics"
+    if ff_faces.exists() and any(ff_faces.rglob("*.jpg")):
+        if not (splits_dir / "ff_train.txt").exists():
+            _ensure_ff_splits(root_path, splits_dir, ff_faces)
+        if (splits_dir / "ff_train.txt").exists():
+            train_datasets.append(FaceForensicsDataset(root_dir, "train", train_transform))
+            val_datasets.append(FaceForensicsDataset(root_dir, "val", val_transform))
+            test_datasets.append(FaceForensicsDataset(root_dir, "test", val_transform))
     
     # Combine or use single dataset
     if use_combined and len(train_datasets) > 1:

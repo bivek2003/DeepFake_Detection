@@ -93,8 +93,9 @@ async def analyze_image_endpoint(
         
         runtime_ms = int((time.time() - start_time) * 1000)
         
-        # Save heatmap if generated
+        # Save heatmap if generated and link as asset for job result
         heatmap_url = None
+        heatmap_path = None
         if result.heatmap is not None:
             heatmap_path = await storage.save_asset(
                 content=result.heatmap,
@@ -103,7 +104,7 @@ async def analyze_image_endpoint(
             )
             heatmap_url = f"/api/v1/assets/{heatmap_path}"
         
-        # Create database record
+        # Create database record FIRST (before creating assets that reference it)
         analysis = Analysis(
             id=analysis_id,
             type=AnalysisType.IMAGE,
@@ -119,6 +120,11 @@ async def analyze_image_endpoint(
         
         db.add(analysis)
         await db.commit()
+        
+        # Now create asset record (after analysis exists in DB)
+        if heatmap_path is not None:
+            await crud.create_asset(db, analysis_id, "heatmap", heatmap_path)
+            await db.commit()
         
         # Record metrics
         ANALYSES_TOTAL.labels(type="image", verdict=result.verdict.value).inc()
@@ -232,11 +238,15 @@ async def analyze_video_endpoint(
         db.add(analysis)
         await db.commit()
         
+        # Get active model filename for worker consistency
+        model_filename = registry.active_model_filename if hasattr(registry, "active_model_filename") else None
+
         # Submit Celery task
         process_video_task.delay(
             job_id=job_id,
             video_path=upload_path,
             file_hash=file_hash,
+            model_filename=model_filename,
         )
         
         logger.info(
