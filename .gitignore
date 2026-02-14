@@ -27,6 +27,7 @@ venv/
 ENV/
 env/
 .venv/
+duckconfig/
 
 # Pytest
 .pytest_cache/
