@@ -18,4 +18,13 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
   },
+  preview: {
+    host: true,
+    port: 5173,
+    strictPort: true,
+    allowedHosts: [
+      'localhost',
+      'deepfake-detection-system.duckdns.org',
+    ],
+  },
 });
