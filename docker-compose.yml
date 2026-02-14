@@ -140,7 +140,7 @@ services:
       - "443:443"
     volumes:
       - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /home/bivek/letsencrypt/config:/etc/letsencrypt:ro
     networks:
       - deepfake-network
     depends_on:
