@@ -61,7 +61,7 @@ class Settings(BaseSettings):
 
     # ML Settings
     model_weights_path: str = Field(default="/app/weights", description="Model weights directory")
-    device: str = Field(default="auto", description="Device: auto, cpu, cuda")
+    device: str = Field(default="cuda", description="Device: auto, cpu, cuda")
     batch_size: int = Field(default=8, description="Batch size for video processing")
     max_frames: int = Field(default=100, description="Maximum frames to sample from video")
     frame_sample_rate: int = Field(default=1, description="Sample every Nth frame")

@@ -86,7 +86,7 @@ class ModelRegistry:
         self.model: nn.Module | None = None
         self.model_info: ModelInfo | None = None
         self.is_initialized = False
-        self._device: str = "cpu"
+        self._device: str = "cuda"
         self._temperature: float = 1.0
         self._threshold: float = 0.5
 
@@ -183,6 +183,16 @@ class ModelRegistry:
                 "type": "production",
             },
             "model_m8_standard.pt": {
+                "name": "M8 (Standard)",
+                "description": "Standard accuracy, 512 hidden units. Best for CPU/Lite.",
+                "type": "standard",
+            },
+            "best.pt": {
+                "name": "M12 (High-End)",
+                "description": "High accuracy, 1024 hidden units. Best for GPU.",
+                "type": "production",
+            },
+            "best_model.pt": {
                 "name": "M8 (Standard)",
                 "description": "Standard accuracy, 512 hidden units. Best for CPU/Lite.",
                 "type": "standard",
