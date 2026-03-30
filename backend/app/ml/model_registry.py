@@ -175,7 +175,7 @@ class ModelRegistry:
             return []
 
         models = []
-        # Standard models
+        # Only list the two supported models
         known_models = {
             "model_m12_high_end.pt": {
                 "name": "M12 (High-End)",
@@ -187,35 +187,21 @@ class ModelRegistry:
                 "description": "Standard accuracy, 512 hidden units. Best for CPU/Lite.",
                 "type": "standard",
             },
-            "best.pt": {
-                "name": "M12 (High-End)",
-                "description": "High accuracy, 1024 hidden units. Best for GPU.",
-                "type": "production",
-            },
-            "best_model.pt": {
-                "name": "M8 (Standard)",
-                "description": "Standard accuracy, 512 hidden units. Best for CPU/Lite.",
-                "type": "standard",
-            },
         }
 
-        for file_path in self._weights_path.glob("*.pt"):
-            filename = file_path.name
-            info = known_models.get(
-                filename,
-                {"name": filename, "description": "Custom model checkpoint", "type": "custom"},
-            )
-
-            models.append(
-                {
-                    "id": filename,
-                    "name": info["name"],
-                    "description": info["description"],
-                    "type": info["type"],
-                    "size_mb": round(file_path.stat().st_size / (1024 * 1024), 1),
-                    "active": False,
-                }
-            )
+        for filename, info in known_models.items():
+            file_path = self._weights_path / filename
+            if file_path.exists():
+                models.append(
+                    {
+                        "id": filename,
+                        "name": info["name"],
+                        "description": info["description"],
+                        "type": info["type"],
+                        "size_mb": round(file_path.stat().st_size / (1024 * 1024), 1),
+                        "active": False,
+                    }
+                )
 
         return models
 
