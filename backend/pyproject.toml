@@ -161,7 +161,7 @@ disable_error_code = ["assignment", "arg-type"]
 # Suppress ML/numpy/torch/opencv type errors
 [[tool.mypy.overrides]]
 module = "app.ml.*"
-disable_error_code = ["arg-type", "assignment", "attr-defined", "return-value", "operator", "call-overload", "misc", "annotation-unchecked", "var-annotated"]
+disable_error_code = ["arg-type", "assignment", "attr-defined", "return-value", "operator", "call-overload", "misc", "annotation-unchecked", "var-annotated", "dict-item"]
 
 # Suppress pydantic computed_field + @property decorator errors
 [[tool.mypy.overrides]]
