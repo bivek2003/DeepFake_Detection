@@ -177,12 +177,12 @@ class ModelRegistry:
         models = []
         # Standard models
         known_models = {
-            "best.pt": {
+            "model_m12_high_end.pt": {
                 "name": "M12 (High-End)",
                 "description": "High accuracy, 1024 hidden units. Best for GPU.",
                 "type": "production",
             },
-            "best_model.pt": {
+            "model_m8_standard.pt": {
                 "name": "M8 (Standard)",
                 "description": "Standard accuracy, 512 hidden units. Best for CPU/Lite.",
                 "type": "standard",

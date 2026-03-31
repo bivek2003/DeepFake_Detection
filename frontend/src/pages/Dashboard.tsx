@@ -27,7 +27,10 @@ export default function Dashboard() {
 
   const loadModels = () => {
     getModels()
-      .then(setModels)
+      .then(fetchedModels => {
+        const allowedIds = ['model_m8_standard.pt', 'model_m12_high_end.pt'];
+        setModels(fetchedModels.filter(m => allowedIds.includes(m.id)));
+      })
       .catch(console.error);
   };
 
