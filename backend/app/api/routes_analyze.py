@@ -243,13 +243,24 @@ async def analyze_video_endpoint(
             registry.active_model_filename if hasattr(registry, "active_model_filename") else None
         )
 
-        # Submit Celery task
-        process_video_task.delay(
-            job_id=job_id,
-            video_path=upload_path,
-            file_hash=file_hash,
-            model_filename=model_filename,
-        )
+        # Submit Celery task (gracefully handle missing broker)
+        try:
+            process_video_task.delay(
+                job_id=job_id,
+                video_path=upload_path,
+                file_hash=file_hash,
+                model_filename=model_filename,
+            )
+        except Exception as celery_err:
+            logger.warning(f"Celery task submission failed (no broker?): {celery_err}")
+            analysis.status = AnalysisStatus.FAILED
+            analysis.error = "Video processing unavailable (task queue not configured)"
+            await db.commit()
+            return VideoAnalysisResponse(
+                job_id=job_id,
+                status=AnalysisStatus.FAILED,
+                message="Video processing is unavailable. Image analysis is still supported.",
+            )
 
         logger.info(
             "Video analysis job submitted",
